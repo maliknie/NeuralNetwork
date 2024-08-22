@@ -1,58 +1,28 @@
 import numpy as np
 
-def ReLU(x):
-    return np.maximum(0, x)
+X = np.array([[1, 2], 
+              [3, 4], 
+              [5, 6]])
 
-class Network:
-    def __init__(self, layers=[None, None, None]):
-        self.input_layer = layers[0]
-        self.hidden_layers = layers[1:-1]
-        self.output_layer = layers[-1]
-
-        self.operations = None
-    
-    def forward(self, x):
-        previous_layer = None
-        for layer in self.hidden_layers:
-            for neuron in layer.neurons:
-                neuron.compute(x, previous_layer)
-            previous_layer = layer
-
-        return x
-    
 class Layer:
-    def __init__(self, neurons):
-        self.neurons = neurons
+    def __init__(self, input_dim, output_dim): # output_dim = number of neurons
+        self.weights = np.random.randn(input_dim, output_dim)
+        self.bias = np.random.randn(output_dim)
 
-class Neuron:
-    def __init__(self, activation=None, weights=[None], bias=None):
-        self.activation = activation
-        self.weights = weights
-        self.bias = bias
+    def forward(self, input):
+        self.output = np.dot(input, self.weights) + self.bias
 
-    def compute(self, previous_layer):
-        if previous_layer != None:
-            self.activation = ReLU(np.dot(previous_layer, self.weights) + self.bias)
-            return self.activation
+class ActivationReLU:
+    def forward(self, input):
+        self.output = np.maximum(0, input)
 
-class Operations:
-    def __init__(self):
-        pass
+layer1 = Layer(2, 3) # 2 input features, 3 neurons
+layer2 = Layer(3, 2) # 3 input features, 2 neurons
 
-    def compute(self):
-        pass
-
-class add(Operations):
-    def __init__(self):
-        pass
-
-    def compute(self, x, y):
-        return x + y
-    
-n = Network()
-input_layer = Layer([Neuron([1, 2, 3], 1), Neuron([4, 5, 6], 1)])
-hidden_layer = Layer([Neuron([1, 2, 3], 1), Neuron([4, 5, 6], 1)])
-output_layer = Layer([Neuron([1, 2, 3], 1), Neuron([4, 5, 6], 1)])
-n.input_layer = input_layer
-n.hidden_layers = [hidden_layer]
-n.output_layer = output_layer
+layer1.forward(X)
+print("Layer 1 output:")
+print(layer1.output)
+print("_________________________")
+layer2.forward(layer1.output)
+print("Layer 2 output:")
+print(layer2.output)
