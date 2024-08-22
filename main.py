@@ -12,10 +12,12 @@ class Network:
         self.operations = None
     
     def forward(self, x):
+        previous_layer = None
         for layer in self.hidden_layers:
             for neuron in layer.neurons:
-                neuron.compute(x)
-                
+                neuron.compute(x, previous_layer)
+            previous_layer = layer
+
         return x
     
 class Layer:
@@ -29,8 +31,9 @@ class Neuron:
         self.bias = bias
 
     def compute(self, previous_layer):
-        self.activation = ReLU(np.dot(previous_layer, self.weights) + self.bias)
-
+        if previous_layer != None:
+            self.activation = ReLU(np.dot(previous_layer, self.weights) + self.bias)
+            return self.activation
 
 class Operations:
     def __init__(self):
