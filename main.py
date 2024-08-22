@@ -15,7 +15,7 @@ class Network:
         previous_layer = None
         for layer in self.hidden_layers:
             for neuron in layer.neurons:
-                neuron.compute(x, previous_layer)
+                neuron = neuron.compute(x, previous_layer)
             previous_layer = layer
 
         return x
@@ -48,7 +48,7 @@ class add(Operations):
 
     def compute(self, x, y):
         return x + y
-    
+
 n = Network()
 input_layer = Layer([Neuron([1, 2, 3], 1), Neuron([4, 5, 6], 1)])
 hidden_layer = Layer([Neuron([1, 2, 3], 1), Neuron([4, 5, 6], 1)])
