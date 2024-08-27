@@ -55,6 +55,15 @@ class Network:
     def backward(self, X, y):
         pass
             
+def backpropagation(loss, prediction, y, activation, layer):
+    dLoss_dPrediction = -2*(y - prediction)
+    dPrediction_dActivation = 1
+    dActivation_dLayer = np.where(layer.output > 0, 1, 0)
+    dLayer_dWeights = activation
+
+    dLoss_dWeights = np.dot(dLayer_dWeights.T, dLoss_dPrediction * dPrediction_dActivation * dActivation_dLayer)
+    dLoss_dBias = dLoss_dPrediction * dPrediction_dActivation * dActivation_dLayer
+    return dLoss_dWeights, dLoss_dBias
 """
 layer1 = Layer(784, 3) # 784 input features, 3 neurons
 layer2 = Layer(3, 2) # 3 input features, 2 neurons
@@ -72,15 +81,6 @@ prediction = activation1.output
 
 loss = np.sum((prediction - y)**2)
 cross_entropy_loss = -np.sum(y * np.log(prediction + 1e-10))
-def backpropagation(loss, prediction, y, activation, layer):
-    dLoss_dPrediction = -2*(y - prediction)
-    dPrediction_dActivation = 1
-    dActivation_dLayer = np.where(layer.output > 0, 1, 0)
-    dLayer_dWeights = activation
-
-    dLoss_dWeights = np.dot(dLayer_dWeights.T, dLoss_dPrediction * dPrediction_dActivation * dActivation_dLayer)
-    dLoss_dBias = dLoss_dPrediction * dPrediction_dActivation * dActivation_dLayer
-    return dLoss_dWeights, dLoss_dBias
 
 print("Loss of the network:")
 print("MSE: ", loss)
