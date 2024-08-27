@@ -27,10 +27,12 @@ class Layer:
 
     def forward(self, input):
         self.output = np.dot(input, self.weights) + self.bias
+        return self.output
 
 class Activation:
     def forward(self, input):
         self.output = np.maximum(0, input)
+        return self.output
 
 class Network:
     def __init__(self, *layers: tuple):
@@ -50,10 +52,16 @@ class Network:
         for layer in self.layers:
             X = layer.forward(X)
             X = self.activation_object.forward(X)
-        return X
+        self.output = X
     
     def backward(self, X, y):
         pass
+
+    def train(self, X, y, epochs):
+        for _ in range(epochs):
+            self.forward(X)
+            self.backward(X, y)
+
             
 def backpropagation(loss, prediction, y, activation, layer):
     dLoss_dPrediction = -2*(y - prediction)
@@ -87,3 +95,5 @@ print("MSE: ", loss)
 print("Cross Entropy: ", cross_entropy_loss)"""
 
 network = Network((784, 3), (3, 2), (2, 10))
+network.forward(X)
+print(network.output)
