@@ -47,13 +47,7 @@ prediction = activation1.output
 loss = np.sum((prediction - y)**2)
 cross_entropy_loss = -np.sum(y * np.log(prediction + 1e-10))
 
-# Here I implement back propagation:
 
-# Loss = (y - prediction)^2
-# dLoss/dPrediction = -2(y - prediction)
-# dPrediction/dActivation = 1
-# dActivation/dLayer = 1 if layer.output > 0 else 0
-# dLayer/dWeights = input
 
 def backpropagation(loss, prediction, y, activation, layer):
     dLoss_dPrediction = -2*(y - prediction)
