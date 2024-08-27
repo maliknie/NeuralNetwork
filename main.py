@@ -73,7 +73,7 @@ def backpropagation(loss, predictions, y, layers):
         if i == len(layers) - 1:
             dPrediction_dActivation = 1  # Assuming the final layer's output is linear
         else:
-            dActivation_dLayer = np.where(layer.output > 0, 1, 0)  # Assuming ReLU
+            dActivation_dLayer = np.where(layer.output > 0, 1, 0)  # Wors with ReLU
             
         dLayer_dWeights = layers[i-1].output if i > 0 else X  # X is the input for the first layer
         
