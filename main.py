@@ -63,15 +63,44 @@ class Network:
             self.backward(X, y)
 
             
-def backpropagation(loss, prediction, y, activation, layer):
-    dLoss_dPrediction = -2*(y - prediction)
-    dPrediction_dActivation = 1
-    dActivation_dLayer = np.where(layer.output > 0, 1, 0)
-    dLayer_dWeights = activation
+def backpropagation(loss, predictions, y, layers):
+    # Step 1: Compute the gradient of the loss with respect to the final prediction
+    dLoss_dPrediction = -2 * (y - predictions)
+    
+    # Start with the gradient of the loss with respect to the output of the final layer
+    dLoss_dOutput = dLoss_dPrediction
+    
+    # Initialize an empty list to store gradients for all layers
+    gradients = []
+    
+    # Step 2: Loop through each layer in reverse order (from output to input)
+    for i in reversed(range(len(layers))):
+        layer = layers[i]
+        
+        # Derivative of the activation function with respect to the input of this layer
+        if i == len(layers) - 1:
+            dPrediction_dActivation = 1  # Assuming the final layer's output is linear
+        else:
+            dActivation_dLayer = np.where(layer.output > 0, 1, 0)  # Wors with ReLU
+            
+        dLayer_dWeights = layers[i-1].output if i > 0 else X  # X is the input for the first layer
+        
+        # Chain rule: dLoss/dWeights = dLoss/dOutput * dOutput/dActivation * dActivation/dWeights
+        dLoss_dWeights = np.dot(dLayer_dWeights.T, dLoss_dOutput * dActivation_dLayer)
+        dLoss_dBias = np.sum(dLoss_dOutput * dActivation_dLayer, axis=0)
+        
+        # Store the gradients for this layer
+        gradients.append((dLoss_dWeights, dLoss_dBias))
+        
+        # Compute the gradient for the input of the next layer (moving backwards)
+        dLoss_dOutput = np.dot(dLoss_dOutput * dActivation_dLayer, layer.weights.T)
+    
+    # Step 3: Reverse the gradients list to match the order of layers
+    gradients.reverse()
+    
+    # Step 4: Return the gradients for all layers
+    return gradients
 
-    dLoss_dWeights = np.dot(dLayer_dWeights.T, dLoss_dPrediction * dPrediction_dActivation * dActivation_dLayer)
-    dLoss_dBias = dLoss_dPrediction * dPrediction_dActivation * dActivation_dLayer
-    return dLoss_dWeights, dLoss_dBias
 """
 layer1 = Layer(784, 3) # 784 input features, 3 neurons
 layer2 = Layer(3, 2) # 3 input features, 2 neurons
