@@ -18,20 +18,42 @@ y = np.eye(10)[y]
 
 
 class Layer:
-    def __init__(self, input_dim, output_dim): # output_dim = number of neurons
+    def __init__(self, input_dim, output_dim, activiation): # output_dim = number of neurons
         self.input_dim = input_dim
         self.output_dim = output_dim
         self.weights = np.array([[random.randint(1, 999)/1000 for _ in range(input_dim)]for _ in range(output_dim)])
         self.weights = np.random.randn(input_dim, output_dim)
         self.bias = np.random.randn(output_dim)
+        self.activation = activiation
+        
 
     def forward(self, input):
         self.output = np.dot(input, self.weights) + self.bias
+        self.output = self.activation(self.output)
         return self.output
 
+
 class Activation:
-    def forward(self, input):
-        self.output = np.maximum(0, input)
+    def relu(self, input):
+        self.output = []
+        for i in range(len(input)):
+            self.output.append = np.maximum(0, input[i])
+        return self.output
+    
+    def softmax(self, predictions):
+        exp_values = np.exp(predictions - np.max(predictions, axis=1, keepdims=True))
+        return exp_values / np.sum(exp_values, axis=1, keepdims=True)
+
+    def sigmoid(self, x):
+        self.output = []
+        for i in range(len(x)):
+            self.output.append = 1 / (1 + e**-x[i])
+        return self.output
+
+    def tanh(self, x):
+        self.output = []
+        for i in range(len(x)):
+            self.output.append = (e**x[i] - e**-x[i]) / (e**x[i] + e**-x[i])
         return self.output
 
 class Network:
@@ -51,7 +73,6 @@ class Network:
     def forward(self, X):
         for layer in self.layers:
             X = layer.forward(X)
-            X = self.activation_object.forward(X)
         self.output = X
     
     def backward(self, X, y):
@@ -62,7 +83,9 @@ class Network:
             self.forward(X)
             self.backward(X, y)
 
-            
+
+
+
 def backpropagation(loss, predictions, y, layers):
     # Step 1: Compute the gradient of the loss with respect to the final prediction
     dLoss_dPrediction = -2 * (y - predictions)
@@ -101,27 +124,34 @@ def backpropagation(loss, predictions, y, layers):
     # Step 4: Return the gradients for all layers
     return gradients
 
-"""
-layer1 = Layer(784, 3) # 784 input features, 3 neurons
-layer2 = Layer(3, 2) # 3 input features, 2 neurons
-layer3 = Layer(2, 10) # 2 input features, 1 neuron
-activation1 = Activation()
+def update_weights(layers, gradients, learning_rate):
+    for i in range(len(layers)):
+        layer = layers[i]
+        dLoss_dWeights, dLoss_dBias = gradients[i]
+        
+        # Update the weights and bias for this layer
+        layer.weights -= learning_rate * dLoss_dWeights
+        layer.bias -= learning_rate * dLoss_dBias
+
+activation = Activation()
+
+layer1 = Layer(784, 3, activation.relu) # 784 input features, 3 neurons
+layer2 = Layer(3, 2, activation.relu) # 3 input features, 2 neurons
+layer3 = Layer(2, 10, activation.softmax) # 2 input features, 10 neurons
+
 
 layer1.forward(X)
-activation1.forward(layer1.output)
-layer2.forward(activation1.output)
-activation1.forward(layer2.output)
-layer3.forward(activation1.output)
-activation1.forward(layer3.output)
+layer2.forward(layer1.output)
+layer3.forward(layer2.output)
+prediction = layer3.output
 
-prediction = activation1.output
 
 loss = np.sum((prediction - y)**2)
 cross_entropy_loss = -np.sum(y * np.log(prediction + 1e-10))
 
 print("Loss of the network:")
 print("MSE: ", loss)
-print("Cross Entropy: ", cross_entropy_loss)"""
+print("Cross Entropy: ", cross_entropy_loss)
 
 network = Network((784, 3), (3, 2), (2, 10))
 network.forward(X)
