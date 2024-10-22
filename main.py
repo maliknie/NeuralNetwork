@@ -1,8 +1,9 @@
 import numpy as np
 import pandas as pd
 import os
+import pickle
 
-LOAD_PARAMS = False
+LOAD_PARAMS = True
 
 # Load and preprocess the dataset
 dataset = pd.read_csv("train.csv")
@@ -46,16 +47,45 @@ class Network:
         self.layers = []
         self.activation = Activation()
 
-    def save_params(self, file_prefix):
-        for i, layer in enumerate(self.layers):
-            np.save(f'{file_prefix}_weights_layer_{i}.npy', layer.weights)
-            np.save(f'{file_prefix}_biases_layer_{i}.npy', layer.bias)
-
-    def load_params(self, file_prefix):
-        for i, layer in enumerate(self.layers):
-            layer.weights = np.load(f'{file_prefix}_weights_layer_{i}.npy')
-            layer.bias = np.load(f'{file_prefix}_biases_layer_{i}.npy')
+    def save_params(self, file_path):
+        fd = os.open(file_path, os.O_CREAT | os.O_WRONLY | os.O_TRUNC)
     
+        # Create a dictionary to store weights and biases
+        params = {
+            'weights': [layer.weights for layer in network.layers],
+            'biases': [layer.bias for layer in network.layers]
+        }
+        
+        # Serialize the parameters using pickle
+        serialized_params = pickle.dumps(params)
+        
+        # Write the serialized data to the file
+        os.write(fd, serialized_params)
+        
+        # Close the file
+        os.close(fd)
+
+        print(f"Parameters saved to {file_path}")
+
+    def load_params(self, file_path):
+        # Open the file in binary read mode
+        fd = os.open(file_path, os.O_RDONLY)
+        
+        # Read the entire file content
+        serialized_params = os.read(fd, os.path.getsize(file_path))
+        
+        # Deserialize the parameters using pickle
+        params = pickle.loads(serialized_params)
+        
+        # Assign the loaded weights and biases back to the network layers
+        for i, layer in enumerate(network.layers):
+            layer.weights = params['weights'][i]
+            layer.bias = params['biases'][i]
+        
+        # Close the file
+        os.close(fd)
+
+        print(f"Parameters loaded from {file_path}")
     def add(self, layer):
         self.layers.append(layer)
     
@@ -78,13 +108,11 @@ class Network:
     
     def train(self, X, y, epochs, learning_rate, batch_size):
         if LOAD_PARAMS:
-            self.load_params('params')
+            self.load_params('params.bin')
+            loss = self.calculate_loss(X, y)
+            print(f'Initial Loss: {loss:.4f}')
         num_samples = X.shape[0]
         for epoch in range(epochs):
-            if epoch == epochs:
-                self.save_params('params')
-                print("End of training")
-
             # Shuffle data at the beginning of each epoch
             permutation = np.random.permutation(num_samples)
             X_shuffled = X[permutation]
@@ -97,6 +125,10 @@ class Network:
     
             loss = self.calculate_loss(X, y)
             print(f'Epoch {epoch + 1}/{epochs}, Loss: {loss:.4f}')
+            if epoch == epochs-1:
+                self.save_params('params.bin')
+                print('Parameters saved')
+
 
 # Backpropagation Function
 def backpropagation(network, X, y, learning_rate):
@@ -136,4 +168,4 @@ network.add(Layer(128, 64, activation.relu))      # Hidden layer 2
 network.add(Layer(64, 10, activation.softmax))    # Output layer
 
 # Train the network
-network.train(X, y, epochs=10, learning_rate=0.01, batch_size=32)
+network.train(X, y, epochs=2, learning_rate=0.01, batch_size=32)
