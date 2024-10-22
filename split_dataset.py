@@ -6,7 +6,7 @@ def split_dataset(dataset, train_size=0.8):
     test_data = dataset.drop(train_data.index)
     return train_data, test_data
 
-train, test = split_dataset(pd.read_csv("train.csv"))
+train, test = split_dataset(pd.read_csv("Data.csv"))
 
 train.to_csv("train.csv", index=False)
 test.to_csv("test.csv", index=False)
