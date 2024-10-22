@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import os
 
 # Load and preprocess the dataset
 dataset = pd.read_csv("train.csv")
@@ -42,6 +43,16 @@ class Network:
     def __init__(self):
         self.layers = []
         self.activation = Activation()
+
+    def save_weights(self, file_prefix):
+        for i, layer in enumerate(self.layers):
+            np.save(f'{file_prefix}_weights_layer_{i}.npy', layer.weights)
+            np.save(f'{file_prefix}_biases_layer_{i}.npy', layer.bias)
+
+    def load_weights(self, file_prefix):
+        for i, layer in enumerate(self.layers):
+            layer.weights = np.load(f'{file_prefix}_weights_layer_{i}.npy')
+            layer.bias = np.load(f'{file_prefix}_biases_layer_{i}.npy')
     
     def add(self, layer):
         self.layers.append(layer)
@@ -66,6 +77,9 @@ class Network:
     def train(self, X, y, epochs, learning_rate, batch_size):
         num_samples = X.shape[0]
         for epoch in range(epochs):
+            if epoch == epochs:
+                print("End of training")
+
             # Shuffle data at the beginning of each epoch
             permutation = np.random.permutation(num_samples)
             X_shuffled = X[permutation]
