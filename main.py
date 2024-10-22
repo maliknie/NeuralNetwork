@@ -180,13 +180,12 @@ def backpropagation(network, X, y, learning_rate):
 activation = Activation()
 network = Network()
 
-network.add(Layer(784, 69, activation.relu))     # Hidden layer 1
-network.add(Layer(69, 20, activation.relu))       # Hidden layer 2
-network.add(Layer(20, 64, activation.relu))       # Hidden layer 3
+network.add(Layer(784, 128, activation.relu))      # Hidden layer 1
+network.add(Layer(128, 64, activation.relu))       # Hidden layer 2
 network.add(Layer(64, 10, activation.softmax))    # Output layer
 
 # Train the network
-network.train(X, y, epochs=10, learning_rate=0.00025, batch_size=32)
+network.train(X, y, epochs=25, learning_rate=0.001, batch_size=32)
 
 
 # Load the test dataset
