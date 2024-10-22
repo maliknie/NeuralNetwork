@@ -1,158 +1,107 @@
 import math
-import random
 import numpy as np
 import pandas as pd
 
-dataset = pd.read_csv("train.csv")
+# Dataset
+dataset = pd.read_csv("NeuralNetwork/train.csv")
 target = dataset["label"]
 data = dataset.drop("label", axis=1)
 
-e = math.e
-#np.random.seed(420)
-
-
 X = np.array(data)
+y = np.eye(10)[np.array(target)]  # One-hot encoding
 
-y = np.array(target)
-y = np.eye(10)[y]
-
-
-class Layer:
-    def __init__(self, input_dim, output_dim, activiation): # output_dim = number of neurons
-        self.input_dim = input_dim
-        self.output_dim = output_dim
-        self.weights = np.array([[random.randint(1, 999)/1000 for _ in range(input_dim)]for _ in range(output_dim)])
-        self.weights = np.random.randn(input_dim, output_dim)
-        self.bias = np.random.randn(output_dim)
-        self.activation = activiation
-        
-
-    def forward(self, input):
-        self.output = np.dot(input, self.weights) + self.bias
-        self.output = self.activation(self.output)
-        return self.output
-
-
+# Activation Functions
 class Activation:
     def relu(self, input):
-        self.output = []
-        for i in range(len(input)):
-            self.output.append = np.maximum(0, input[i])
-        return self.output
+        return np.maximum(0, input)
     
     def softmax(self, predictions):
-        exp_values = np.exp(predictions - np.max(predictions, axis=1, keepdims=True))
+        exp_values = np.exp(predictions - np.max(predictions, axis=1, keepdims=True))  # For numerical stability
         return exp_values / np.sum(exp_values, axis=1, keepdims=True)
 
     def sigmoid(self, x):
-        self.output = []
-        for i in range(len(x)):
-            self.output.append = 1 / (1 + e**-x[i])
-        return self.output
+        return 1 / (1 + np.exp(-x))
 
     def tanh(self, x):
-        self.output = []
-        for i in range(len(x)):
-            self.output.append = (e**x[i] - e**-x[i]) / (e**x[i] + e**-x[i])
-        return self.output
+        return np.tanh(x)
 
+# Layer Class
+class Layer:
+    def __init__(self, input_dim, output_dim, activation):
+        # He initialization for ReLU activations
+        self.weights = np.random.randn(input_dim, output_dim) * np.sqrt(2 / input_dim)
+        self.bias = np.zeros((1, output_dim))  # Initialize bias as zeros
+        self.activation = activation
+
+    def forward(self, input):
+        self.output = np.dot(input, self.weights) + self.bias
+        return self.activation(self.output)
+
+# Network Class
 class Network:
-    def __init__(self, *layers: tuple):
+    def __init__(self):
         self.layers = []
-        for layer in layers:
-            self.layers.append(Layer(layer[0], layer[1]))
         self.activation_object = Activation()
 
     def add(self, layer):
         self.layers.append(layer)
-    
-    def print_network(self):
-        for i, layer in enumerate(self.layers):
-            print("Layer {i} takes {layer.input_dim} inputs and has {layer.output_dim} neurons")
 
     def forward(self, X):
         for layer in self.layers:
             X = layer.forward(X)
         self.output = X
-    
-    def backward(self, X, y):
-        pass
+        return self.output
 
-    def train(self, X, y, epochs):
-        for _ in range(epochs):
-            self.forward(X)
-            self.backward(X, y)
+    def train(self, X, y, epochs, learning_rate):
+        runningloss = 0
+        for epoch in range(epochs):
+            for i in range(len(X)):
+                self.backward(X[i].reshape(1, -1), y[i].reshape(1, -1), learning_rate)
+                runningloss += np.sum((y[i] - self.forward(X[i].reshape(1, -1))) ** 2) / len(X)
+                if i % 1000 == 0:
+                    print(f'Epoch {epoch+1}/{epochs}, Loss: {runningloss:.4f}')
+                    runningloss = 0
+            loss = np.sum((y - self.forward(X)) ** 2) / len(X)
+            print(f'Epoch {epoch+1}/{epochs}, Loss: {loss:.4f}')
 
+    def backward(self, X, y, learning_rate):
+        backpropagation(self, X, y, learning_rate)
 
+# Backpropagation
+def backpropagation(network, X, y, learning_rate):
+    network.forward(X)
+    num_layers = len(network.layers)
+    layer_deltas = [None] * num_layers
 
+    predictions = network.output
+    loss_gradient = 2 * (predictions - y)
 
-def backpropagation(loss, predictions, y, layers):
-    # Step 1: Compute the gradient of the loss with respect to the final prediction
-    dLoss_dPrediction = -2 * (y - predictions)
-    
-    # Start with the gradient of the loss with respect to the output of the final layer
-    dLoss_dOutput = dLoss_dPrediction
-    
-    # Initialize an empty list to store gradients for all layers
-    gradients = []
-    
-    # Step 2: Loop through each layer in reverse order (from output to input)
-    for i in reversed(range(len(layers))):
-        layer = layers[i]
+    for i in reversed(range(num_layers)):
+        layer = network.layers[i]
         
-        # Derivative of the activation function with respect to the input of this layer
-        if i == len(layers) - 1:
-            dPrediction_dActivation = 1  # Assuming the final layer's output is linear
+        if i == num_layers - 1:  # Output layer with softmax
+            delta = loss_gradient
         else:
-            dActivation_dLayer = np.where(layer.output > 0, 1, 0)  # Wors with ReLU
-            
-        dLayer_dWeights = layers[i-1].output if i > 0 else X  # X is the input for the first layer
-        
-        # Chain rule: dLoss/dWeights = dLoss/dOutput * dOutput/dActivation * dActivation/dWeights
-        dLoss_dWeights = np.dot(dLayer_dWeights.T, dLoss_dOutput * dActivation_dLayer)
-        dLoss_dBias = np.sum(dLoss_dOutput * dActivation_dLayer, axis=0)
-        
-        # Store the gradients for this layer
-        gradients.append((dLoss_dWeights, dLoss_dBias))
-        
-        # Compute the gradient for the input of the next layer (moving backwards)
-        dLoss_dOutput = np.dot(dLoss_dOutput * dActivation_dLayer, layer.weights.T)
-    
-    # Step 3: Reverse the gradients list to match the order of layers
-    gradients.reverse()
-    
-    # Step 4: Return the gradients for all layers
-    return gradients
+            next_layer = network.layers[i + 1]
+            delta = np.dot(layer_deltas[i + 1], next_layer.weights.T) * (layer.output > 0)  # ReLU derivative
 
-def update_weights(layers, gradients, learning_rate):
-    for i in range(len(layers)):
-        layer = layers[i]
-        dLoss_dWeights, dLoss_dBias = gradients[i]
-        
-        # Update the weights and bias for this layer
+        layer_deltas[i] = delta
+        input_to_layer = X if i == 0 else network.layers[i - 1].output
+        dLoss_dWeights = np.dot(input_to_layer.T, delta)
+        dLoss_dBias = np.sum(delta, axis=0)
+
+        # Update weights and biases with learning rate
         layer.weights -= learning_rate * dLoss_dWeights
         layer.bias -= learning_rate * dLoss_dBias
 
+# Define network and layers
 activation = Activation()
+network = Network()
 
-layer1 = Layer(784, 3, activation.relu) # 784 input features, 3 neurons
-layer2 = Layer(3, 2, activation.relu) # 3 input features, 2 neurons
-layer3 = Layer(2, 10, activation.softmax) # 2 input features, 10 neurons
+# Adjust number of neurons if needed
+network.add(Layer(784, 128, activation.relu))  # Hidden layer 1
+network.add(Layer(128, 64, activation.relu))  # Hidden layer 2
+network.add(Layer(64, 10, activation.softmax))  # Output layer
 
-
-layer1.forward(X)
-layer2.forward(layer1.output)
-layer3.forward(layer2.output)
-prediction = layer3.output
-
-
-loss = np.sum((prediction - y)**2)
-cross_entropy_loss = -np.sum(y * np.log(prediction + 1e-10))
-
-print("Loss of the network:")
-print("MSE: ", loss)
-print("Cross Entropy: ", cross_entropy_loss)
-
-network = Network((784, 3), (3, 2), (2, 10))
-network.forward(X)
-print(network.output)
+# Train the network with a lower learning rate
+network.train(X, y, epochs=100, learning_rate=0.001)
