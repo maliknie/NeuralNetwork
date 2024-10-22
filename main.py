@@ -128,6 +128,13 @@ class Network:
             if epoch == epochs-1:
                 self.save_params('params.bin')
                 print('Parameters saved')
+    def test(self, X, y):
+        for i in range(len(X)):
+            print(f"Predicted: {np.argmax(self.forward(X[i]))}, Actual: {np.argmax(y[i])}")
+        predictions = self.forward(X)
+        accuracy = np.mean(np.argmax(predictions, axis=1) == np.argmax(y, axis=1))
+        return accuracy
+
 
 
 # Backpropagation Function
@@ -169,3 +176,13 @@ network.add(Layer(64, 10, activation.softmax))    # Output layer
 
 # Train the network
 network.train(X, y, epochs=2, learning_rate=0.01, batch_size=32)
+
+
+# Load the test dataset
+test_dataset = pd.read_csv("test.csv")
+test_target = test_dataset["label"]
+test_data = test_dataset.drop("label", axis=1)
+X = np.array(test_data) / 255.0
+y = np.eye(10)[np.array(test_target)]
+
+print(network.test(X, y))
