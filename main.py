@@ -92,6 +92,13 @@ class Network:
     
             loss = self.calculate_loss(X, y)
             print(f'Epoch {epoch + 1}/{epochs}, Loss: {loss:.4f}')
+    
+    def test(self, X, y):
+        for i in range(len(x)):
+            print(f"Predicted: {np.argmax(self.forward(X[i]))}, Actual: {np.argmax(y[i])}")
+        predictions = self.forward(X)
+        accuracy = np.mean(np.argmax(predictions, axis=1) == np.argmax(y, axis=1))
+        return accuracy
 
 # Backpropagation Function
 def backpropagation(network, X, y, learning_rate):
@@ -132,3 +139,16 @@ network.add(Layer(64, 10, activation.softmax))    # Output layer
 
 # Train the network
 network.train(X, y, epochs=10, learning_rate=0.01, batch_size=32)
+
+# Save the trained weights
+network.save_weights("model")
+
+
+# Load the test dataset
+test_dataset = pd.read_csv("test.csv")
+test_target = test_dataset["label"]
+test_data = test_dataset.drop("label", axis=1)
+X = np.array(test_data) / 255.0
+y = np.eye(10)[np.array(test_target)]
+
+network.test(X, y)
