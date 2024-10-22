@@ -171,7 +171,7 @@ activation_functions = {
     'softmax': softmax()
 }
 
-# Choose activation functions for layers
+# Choose activation functions for output layer the others must be relu. Don't choose tanh for the output layer.
 network.add(Layer(784, 128, activation_functions['relu']))  # Hidden layer 1
 network.add(Layer(128, 64, activation_functions['relu']))   # Hidden layer 2
 network.add(Layer(64, 10, activation_functions['softmax']))  # Output layer
@@ -186,3 +186,4 @@ X_test = np.array(test_data) / 255.0
 y_test = np.eye(10)[np.array(test_target)]
 
 print("Test accuracy:", network.test(X_test, y_test))
+

@@ -15,14 +15,14 @@ X = np.array(data) / 255.0  # Scale pixel values to [0, 1]
 y = np.eye(10)[np.array(target)]  # One-hot encoding of labels
 
 # Activation Functions
-class relu:
+class ReLU:
     def value(self, x):
         return np.maximum(0, x)
     
     def derivative(self, x):
         return (x > 0).astype(float)
 
-class softmax:
+class Softmax:
     def value(self, x):
         if np.isnan(x).any() or np.isinf(x).any():
             print("NaN or Inf detected in input to softmax.")
@@ -36,7 +36,7 @@ class softmax:
     def derivative(self, x):
         return x * (1 - x)
 
-class sigmoid:
+class Sigmoid:
     def value(self, x):
         return 1 / (1 + np.exp(-x))
     
@@ -146,7 +146,12 @@ class Network:
                     X_processed[j] = self.CNN_preprocessing(X_batch[j])
 
                 self.backward(X_processed, y_batch, learning_rate)
-    
+                
+                # Optionally calculate loss after each batch
+                loss = self.calculate_loss(X_processed, y_batch)  
+                print(f'Batch Loss: {loss:.4f}')
+
+            # Optional to save parameters after each epoch
             loss = self.calculate_loss(X_processed, y_batch)  # Calculate loss on processed batch
             print(f'Epoch {epoch + 1}/{epochs}, Loss: {loss:.4f}')
             if epoch == epochs - 1:
@@ -227,9 +232,9 @@ def backpropagation(network, X, y, learning_rate):
 
 # Instantiate and add layers to the network
 network = Network(kernel_size=[3], pooling_layers=[2])
-network.add(Layer(784, 64, relu()))      # Hidden layer 1
-network.add(Layer(64, 64, relu()))       # Hidden layer 2
-network.add(Layer(64, 10, softmax()))    # Output layer
+network.add(Layer(784, 64, ReLU()))      # Hidden layer 1
+network.add(Layer(64, 64, ReLU()))       # Hidden layer 2
+network.add(Layer(64, 10, Softmax()))    # Output layer
 
 # Train the network
 network.train(X, y, epochs=10, learning_rate=0.01, batch_size=32)
