@@ -115,9 +115,12 @@ class Network:
     
     def train(self, X, y, epochs, learning_rate, batch_size):
         if LOAD_PARAMS:
-            self.load_params('params.bin')
-            loss = self.calculate_loss(X, y)
-            print(f'Initial Loss: {loss:.4f}')
+            try:
+                self.load_params('params.bin')
+                loss = self.calculate_loss(X, y)
+                print(f'Initial Loss: {loss:.4f}')
+            except:
+                print('Error loading parameters. Training from scratch.')
         num_samples = X.shape[0]
         for epoch in range(epochs):
             # Shuffle data at the beginning of each epoch
@@ -145,7 +148,6 @@ class Network:
 
 
 
-# Backpropagation Function
 def backpropagation(network, X, y, learning_rate):
     predictions = network.forward(X)
     num_layers = len(network.layers)
@@ -183,7 +185,7 @@ network.add(Layer(128, 64, activation.relu))      # Hidden layer 2
 network.add(Layer(64, 10, activation.softmax))    # Output layer
 
 # Train the network
-network.train(X, y, epochs=20, learning_rate=0.01, batch_size=32)
+network.train(X, y, epochs=10, learning_rate=0.0005, batch_size=32)
 
 
 # Load the test dataset
