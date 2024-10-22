@@ -2,6 +2,8 @@ import numpy as np
 import pandas as pd
 import os
 
+LOAD_PARAMS = False
+
 # Load and preprocess the dataset
 dataset = pd.read_csv("train.csv")
 target = dataset["label"]
@@ -26,7 +28,7 @@ class Activation:
 
 # Layer Class
 class Layer:
-    def __init__(self, input_dim, output_dim, activation_func):
+    def __init__(self, input_dim, output_dim, activation_func, load_params=False):
         # He initialization for ReLU activations
         self.weights = np.random.randn(input_dim, output_dim) * np.sqrt(2 / input_dim)
         self.bias = np.zeros((1, output_dim))
@@ -44,12 +46,12 @@ class Network:
         self.layers = []
         self.activation = Activation()
 
-    def save_weights(self, file_prefix):
+    def save_params(self, file_prefix):
         for i, layer in enumerate(self.layers):
             np.save(f'{file_prefix}_weights_layer_{i}.npy', layer.weights)
             np.save(f'{file_prefix}_biases_layer_{i}.npy', layer.bias)
 
-    def load_weights(self, file_prefix):
+    def load_params(self, file_prefix):
         for i, layer in enumerate(self.layers):
             layer.weights = np.load(f'{file_prefix}_weights_layer_{i}.npy')
             layer.bias = np.load(f'{file_prefix}_biases_layer_{i}.npy')
@@ -75,9 +77,12 @@ class Network:
         backpropagation(self, X, y, learning_rate)
     
     def train(self, X, y, epochs, learning_rate, batch_size):
+        if LOAD_PARAMS:
+            self.load_params('params')
         num_samples = X.shape[0]
         for epoch in range(epochs):
             if epoch == epochs:
+                self.save_params('params')
                 print("End of training")
 
             # Shuffle data at the beginning of each epoch
