@@ -40,6 +40,13 @@ class sigmoid:
     
     def derivative(self, x):
         return x * (1 - x)
+    
+class tanh:
+    def value(self, x):
+        return np.tanh(x)
+    
+    def derivative(self, x):
+        return 1 - x ** 2
 
 # Layer Class
 class Layer:
@@ -156,9 +163,18 @@ def backpropagation(network, X, y, learning_rate):
 # Initialize the network and add layers
 network = Network()
 
-network.add(Layer(784, 128, relu()))      # Hidden layer 1
-network.add(Layer(128, 64, relu()))       # Hidden layer 2
-network.add(Layer(64, 10, softmax()))     # Output layer
+# Define activation functions
+activation_functions = {
+    'relu': relu(),
+    'sigmoid': sigmoid(),
+    'tanh': tanh(),
+    'softmax': softmax()
+}
+
+# Choose activation functions for layers
+network.add(Layer(784, 128, activation_functions['relu']))  # Hidden layer 1
+network.add(Layer(128, 64, activation_functions['relu']))   # Hidden layer 2
+network.add(Layer(64, 10, activation_functions['softmax']))  # Output layer
 
 network.train(X, y, epochs=25, learning_rate=0.01, batch_size=32)
 
