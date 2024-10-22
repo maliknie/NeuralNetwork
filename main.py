@@ -136,4 +136,4 @@ network.add(Layer(128, 64, activation.relu))      # Hidden layer 2
 network.add(Layer(64, 10, activation.softmax))    # Output layer
 
 # Train the network
-network.train(X, y, epochs=10, learning_rate=0.005, batch_size=32)
+network.train(X, y, epochs=10, learning_rate=0.01, batch_size=32)
