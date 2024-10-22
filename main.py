@@ -23,7 +23,14 @@ class Activation:
         return (x > 0).astype(float)
     
     def softmax(self, x):
-        exp_values = np.exp(x - np.max(x, axis=1, keepdims=True))  # For numerical stability
+       # Check for NaN or Inf in x
+        if np.isnan(x).any() or np.isinf(x).any():
+            print("NaN or Inf detected in input to softmax.")
+            print(x)
+            raise ValueError("Invalid values in softmax input.")
+        
+        # Safe softmax computation
+        exp_values = np.exp(x - np.max(x, axis=1, keepdims=True))
         probabilities = exp_values / np.sum(exp_values, axis=1, keepdims=True)
         return probabilities
 
@@ -130,7 +137,8 @@ class Network:
                 print('Parameters saved')
     def test(self, X, y):
         for i in range(len(X)):
-            print(f"Predicted: {np.argmax(self.forward(X[i]))}, Actual: {np.argmax(y[i])}")
+            #print(f"Predicted: {np.argmax(self.forward(X[i]))}, Actual: {np.argmax(y[i])}")
+            pass
         predictions = self.forward(X)
         accuracy = np.mean(np.argmax(predictions, axis=1) == np.argmax(y, axis=1))
         return accuracy
@@ -175,7 +183,7 @@ network.add(Layer(128, 64, activation.relu))      # Hidden layer 2
 network.add(Layer(64, 10, activation.softmax))    # Output layer
 
 # Train the network
-network.train(X, y, epochs=2, learning_rate=0.01, batch_size=32)
+network.train(X, y, epochs=5, learning_rate=0.03, batch_size=32)
 
 
 # Load the test dataset
