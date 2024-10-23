@@ -78,6 +78,7 @@ class DrawingApp:
         df.to_csv("drawn_digit.csv", mode=file_mode, index=False, header=not os.path.exists("drawn_digit.csv"))
         
         print("Image saved to drawn_digit.csv with label:", label)
+        return df
 
 if __name__ == "__main__":
     root = tk.Tk()
