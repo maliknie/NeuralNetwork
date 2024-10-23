@@ -3,7 +3,7 @@ import pandas as pd
 import os
 import pickle
 
-LOAD_PARAMS = True
+LOAD_PARAMS = False
 
 # Load and preprocess the dataset
 dataset = pd.read_csv("train.csv")
@@ -29,12 +29,13 @@ class Softmax:
             print(x)
             raise ValueError("Invalid values in softmax input.")
         
-        exp_values = np.exp(x - np.max(x, axis=1, keepdims=True))
+        x = x - np.max(x, axis=1, keepdims=True)
+        exp_values = np.exp(x)
         probabilities = exp_values / np.sum(exp_values, axis=1, keepdims=True)
         return probabilities
-    
     def derivative(self, x):
         return x * (1 - x)
+
 
 class Sigmoid:
     def value(self, x):
@@ -46,13 +47,12 @@ class Sigmoid:
 # Layer Class
 class Layer:
     def __init__(self, input_dim, output_dim, activation_func):
-        # He initialization for ReLU activations
-        self.weights = np.random.randn(input_dim, output_dim) * np.sqrt(2 / input_dim)
+        self.weights = np.random.randn(input_dim, output_dim) * 0.01  # Use smaller scale
         self.bias = np.zeros((1, output_dim))
         self.activation_func = activation_func  # Activation function instance
     
     def forward(self, input_data):
-        self.input = input_data  # Store input for use in backpropagation
+        self.input = input_data
         self.output_pre_activation = np.dot(input_data, self.weights) + self.bias
         self.output = self.activation_func.value(self.output_pre_activation)
 
@@ -140,7 +140,7 @@ class Network:
             for i in range(0, num_samples, batch_size):
                 X_batch = X_shuffled[i:i + batch_size]
                 y_batch = y_shuffled[i:i + batch_size]
-                X_processed = np.zeros((X_batch.shape[0], 784))  # Initialize processed output
+                X_processed = np.zeros((X_batch.shape[0], 169))  # Initialize processed output
 
                 for j in range(len(X_batch)):
                     X_processed[j] = self.CNN_preprocessing(X_batch[j])
@@ -148,8 +148,7 @@ class Network:
                 self.backward(X_processed, y_batch, learning_rate)
                 
                 # Optionally calculate loss after each batch
-                loss = self.calculate_loss(X_processed, y_batch)  
-                print(f'Batch Loss: {loss:.4f}')
+                loss = self.calculate_loss(X_processed, y_batch)
 
             # Optional to save parameters after each epoch
             loss = self.calculate_loss(X_processed, y_batch)  # Calculate loss on processed batch
@@ -184,25 +183,27 @@ class Network:
         return output
 
     def CNN_preprocessing(self, X):
-        kernel_size = self.kernel_size[0]  # Assuming one kernel size for simplicity
-        pooling_size = self.pooling_layers[0]  # Assuming one pooling size for simplicity
-        
+        kernel_size = self.kernel_size[0]
+        pooling_size = self.pooling_layers[0]
+
         X = X.reshape(28, 28)  # Assuming input is a flattened 28x28 image
-        
+
         # Apply convolution
         X = self.convolution2d(X, np.ones((kernel_size, kernel_size)) / (kernel_size ** 2))
 
         # Apply max pooling
         X = self.max_pooling2d(X, pooling_size)
-        
+
         # Flatten to a vector
         X = X.flatten()
 
         # Check output shape
-        if X.shape[0] != 784:
-            raise ValueError(f"Unexpected output shape from CNN preprocessing: {X.shape}")
+        expected_shape = 169  # Change as needed
+        if X.shape[0] != expected_shape:
+            raise ValueError(f"Unexpected output shape from CNN preprocessing: {X.shape}. Expected shape: ({expected_shape},)")
 
         return X
+
 
 # Backpropagation function with gradient clipping
 def backpropagation(network, X, y, learning_rate):
@@ -232,12 +233,12 @@ def backpropagation(network, X, y, learning_rate):
 
 # Instantiate and add layers to the network
 network = Network(kernel_size=[3], pooling_layers=[2])
-network.add(Layer(784, 64, ReLU()))      # Hidden layer 1
+network.add(Layer(169, 64, ReLU()))      # Hidden layer 1
 network.add(Layer(64, 64, ReLU()))       # Hidden layer 2
 network.add(Layer(64, 10, Softmax()))    # Output layer
 
 # Train the network
-network.train(X, y, epochs=10, learning_rate=0.01, batch_size=32)
+network.train(X, y, epochs=10, learning_rate=0.001, batch_size=32)
 
 # Load the test dataset
 test_dataset = pd.read_csv("test.csv")
