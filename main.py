@@ -190,7 +190,7 @@ network.add(Layer(256, 128, activation.relu))       # Hidden layer 3
 network.add(Layer(128, 10, activation.softmax))    # Output layer
 
 # Train the network
-network.train(X, y, epochs=10, learning_rate=0.0005, batch_size=32)
+network.train(X, y, epochs=5, learning_rate=0.001, batch_size=32)
 
 
 # Load the test dataset
