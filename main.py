@@ -3,6 +3,29 @@ import pandas as pd
 import os
 import pickle
 
+lines = 0
+with open("drawn_digit.csv", "r") as file:
+    for line in file:
+        lines += 1
+
+df = pd.read_csv("drawn_digit.csv", header=None)
+
+X_guess = df.iloc[:, :-1].values
+y_guess = df.iloc[:, -1].values 
+
+# Reshape the input data to 28x28 images
+X_guess = X_guess.reshape(lines, 784).astype('float32')  # Reshape to (num_samples, 28, 28, 1)
+X_guess /= 255  # Normalize to [0, 1]
+
+# Convert labels to integers if they are strings
+y_guess = y_guess.astype(int)
+
+print(f"Loaded {len(X_guess)} samples.")
+
+
+
+
+
 LOAD_PARAMS = True
 
 # Load and preprocess the dataset
@@ -65,6 +88,12 @@ class Network:
     def __init__(self):
         self.layers = []
         self.activation = Activation()
+
+    def guess(self, X, y):
+        print("Prediction:")
+        print(np.argmax(self.forward(X)))
+        print("Label: ")
+        print(y)
 
     def save_params(self, file_path):
         fd = os.open(file_path, os.O_CREAT | os.O_WRONLY | os.O_TRUNC)
@@ -190,7 +219,7 @@ network.add(Layer(256, 128, activation.relu))       # Hidden layer 3
 network.add(Layer(128, 10, activation.softmax))    # Output layer
 
 # Train the network
-network.train(X, y, epochs=5, learning_rate=0.001, batch_size=32)
+#network.train(X, y, epochs=5, learning_rate=0.001, batch_size=32)
 
 
 # Load the test dataset
@@ -200,4 +229,6 @@ test_data = test_dataset.drop("label", axis=1)
 X = np.array(test_data) / 255.0
 y = np.eye(10)[np.array(test_target)]
 
-print(network.test(X, y))
+network.load_params("params97_38.bin")
+#print(network.test(X, y))
+network.guess(X_guess, y_guess)
