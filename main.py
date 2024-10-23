@@ -4,11 +4,11 @@ import os
 import pickle
 
 lines = 0
-with open("drawn_digit.csv", "r") as file:
+with open("datasets/drawn_digit.csv", "r") as file:
     for line in file:
         lines += 1
 
-df = pd.read_csv("drawn_digit.csv", header=None)
+df = pd.read_csv("datasets/drawn_digit.csv", header=None)
 
 X_guess = df.iloc[:, :-1].values
 y_guess = df.iloc[:, -1].values 
@@ -25,11 +25,19 @@ print(f"Loaded {len(X_guess)} samples.")
 
 
 
+test_dataset = pd.read_csv("datasets/test.csv")
+test_target = test_dataset["label"]
+test_data = test_dataset.drop("label", axis=1)
+X = np.array(test_data) / 255.0
+y = np.eye(10)[np.array(test_target)]
+
+
+
 
 LOAD_PARAMS = True
 
 # Load and preprocess the dataset
-dataset = pd.read_csv("train.csv")
+dataset = pd.read_csv("datasets/train.csv")
 target = dataset["label"]
 data = dataset.drop("label", axis=1)
 
@@ -40,6 +48,9 @@ y = np.eye(10)[np.array(target)]  # One-hot encoding of labels
 # Activation Functions
 class Activation:
     def relu(self, x, derivative=False):
+        print(self)
+        print(x)
+        print(derivative)
         if derivative:
             return (x > 0).astype(float)
         return np.maximum(0, x)
@@ -81,7 +92,7 @@ class Layer:
     def forward(self, input_data):
         self.input = input_data 
         self.output_pre_activation = np.dot(input_data, self.weights) + self.bias
-        self.output = self.activation_func(self.output_pre_activation)
+        self.output = self.activation_func(self.output_pre_activation, "yo")
         return self.output
 
 class Network:
@@ -143,13 +154,6 @@ class Network:
         backpropagation(self, X, y, learning_rate)
     
     def train(self, X, y, epochs, learning_rate, batch_size):
-        if LOAD_PARAMS:
-            try:
-                self.load_params('params.bin')
-                loss = self.calculate_loss(X, y)
-                print(f'Initial Loss: {loss:.4f}')
-            except:
-                print('Error loading parameters. Training from scratch.')
         num_samples = X.shape[0]
         for epoch in range(epochs):
             # Shuffle data at the beginning of each epoch
@@ -218,17 +222,17 @@ network.add(Layer(512, 256, activation.relu))       # Hidden layer 2
 network.add(Layer(256, 128, activation.relu))       # Hidden layer 3
 network.add(Layer(128, 10, activation.softmax))    # Output layer
 
+if LOAD_PARAMS:
+    try:
+        network.load_params("params/params97_38.bin")
+        print("Parameters loaded")
+    except FileNotFoundError:
+        print("No parameters found. Training network from scratch.")
+
 # Train the network
 #network.train(X, y, epochs=5, learning_rate=0.001, batch_size=32)
 
 
-# Load the test dataset
-test_dataset = pd.read_csv("test.csv")
-test_target = test_dataset["label"]
-test_data = test_dataset.drop("label", axis=1)
-X = np.array(test_data) / 255.0
-y = np.eye(10)[np.array(test_target)]
-
-network.load_params("params97_38.bin")
-#print(network.test(X, y))
-network.guess(X_guess, y_guess)
+# Load the test dataset and evaluate the network
+print(network.test(X, y))
+#network.guess(X_guess, y_guess)
