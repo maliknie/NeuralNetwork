@@ -113,31 +113,24 @@ class Network:
         return prediction
 
     def save_params(self, file_path):
-        fd = os.open(file_path, os.O_CREAT | os.O_WRONLY | os.O_TRUNC)
-    
+        file_path = f"params/{file_path}"
         params = {
-            'weights': [layer.weights for layer in network.layers],
-            'biases': [layer.bias for layer in network.layers]
+            'weights': [layer.weights for layer in self.layers],
+            'biases': [layer.bias for layer in self.layers]
         }
-        
-        serialized_params = pickle.dumps(params)
-        
-        os.write(fd, serialized_params)
-
-        os.close(fd)
-
+        with open(file_path, 'wb') as f:
+            pickle.dump(params, f)
         print(f"Parameters saved to {file_path}")
 
+
     def load_params(self, file_path):
-        fd = os.open(file_path, os.O_RDONLY)
-        serialized_params = os.read(fd, os.path.getsize(file_path))
-        params = pickle.loads(serialized_params)
-        
+        with open(file_path, 'rb') as f:
+            params = pickle.load(f)
         for i, layer in enumerate(self.layers):
             layer.weights = params['weights'][i]
             layer.bias = params['biases'][i]
-        
-        os.close(fd)
+        print(f"Parameters loaded from {file_path}")
+
 
         print(f"Parameters loaded from {file_path}")
     def add(self, layer):
@@ -181,6 +174,7 @@ class Network:
             if epoch % 50 == 0 and epoch != 0:
                 self.save_params(f'params_{epoch}.bin')
                 print(f'Parameters saved at epoch {epoch}')
+
     def test(self, X, y):
         for i in range(len(X)):
             if i%500 == 0:
@@ -239,7 +233,7 @@ if __name__ == "__main__":
             print("No parameters found. Training network from scratch.")
 
     # Train the network
-    #network.train(X, y, epochs=5, learning_rate=0.001, batch_size=32)
+    network.train(X, y, epochs=5, learning_rate=0.0005, batch_size=32)
 
 
     # Load the test dataset and evaluate the network
