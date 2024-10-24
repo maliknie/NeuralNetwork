@@ -151,7 +151,7 @@ class Network:
         self.layers = []
         self.activation = Activation()
 
-    def guess(self, X_guess, y_guess=None):
+    def predict(self, X_guess, y_guess=None):
         if type(X_guess) == type(None):
             print("No input data provided.", X_guess)
             return
