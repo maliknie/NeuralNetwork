@@ -78,8 +78,22 @@ class DrawingApp:
         def return_image(self):
             self.returned_image = self.image_data.reshape(1, 784) / 255.0
             self.master.quit()  # Close the window
+    
+    # Initialize the Tkinter application and start the main loop
+    root = tk.Tk()
+    app = DrawingApp(root)
+    root.mainloop()
+
+    return app.returned_image  # Return the image after the window is closed
 
 network = initialize_network()
-root = tk.Tk()
-app = DrawingApp(root)
-root.mainloop()
+while True:
+    input_tensor = predict_image()  # input_tensor should now be a valid array, not None
+    if input_tensor is not None:
+        network.guess(input_tensor, "No Label given")
+    else:
+        print("No image drawn.")
+
+    user_input = input("Draw another image? (Y/n): ")
+    if user_input.lower() == 'n':
+        break
