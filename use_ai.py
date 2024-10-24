@@ -93,5 +93,5 @@ while True:
         print("No image drawn.")
 
     user_input = input("Draw another image? (Y/n): ")
-    if user_input.lower() == 'n' or user_input.lower() == 'N':
+    if user_input.lower() == 'n':
         break
