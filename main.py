@@ -3,57 +3,56 @@ import pandas as pd
 import os
 import pickle
 
-lines = 0
-with open("datasets/drawn_digit.csv", "r") as file:
-    for line in file:
-        lines += 1
+if __name__ == "__main__":
 
-df = pd.read_csv("datasets/drawn_digit.csv", header=None)
+    lines = 0
+    with open("datasets/drawn_digit.csv", "r") as file:
+        for line in file:
+            lines += 1
 
-X_guess = df.iloc[:, :-1].values
-y_guess = df.iloc[:, -1].values 
+    df = pd.read_csv("datasets/drawn_digit.csv", header=None)
 
-# Reshape the input data to 28x28 images
-X_guess = X_guess.reshape(lines, 784).astype('float32')  # Reshape to (num_samples, 28, 28, 1)
-X_guess /= 255  # Normalize to [0, 1]
+    X_guess = df.iloc[:, :-1].values
+    y_guess = df.iloc[:, -1].values 
 
-# Convert labels to integers if they are strings
-y_guess = y_guess.astype(int)
+    # Reshape the input data to 28x28 images
+    X_guess = X_guess.reshape(lines, 784).astype('float32')  # Reshape to (num_samples, 28, 28, 1)
+    X_guess /= 255  # Normalize to [0, 1]
 
-print(f"Loaded {len(X_guess)} samples.")
+    # Convert labels to integers if they are strings
+    y_guess = y_guess.astype(int)
 
-
-
-
-test_dataset = pd.read_csv("datasets/test.csv")
-test_target = test_dataset["label"]
-test_data = test_dataset.drop("label", axis=1)
-X = np.array(test_data) / 255.0
-y = np.eye(10)[np.array(test_target)]
+    print(f"Loaded {len(X_guess)} samples.")
 
 
 
 
-LOAD_PARAMS = True
+    test_dataset = pd.read_csv("datasets/test.csv")
+    test_target = test_dataset["label"]
+    test_data = test_dataset.drop("label", axis=1)
+    X_test = np.array(test_data) / 255.0
+    y_test = np.eye(10)[np.array(test_target)]
 
-# Load and preprocess the dataset
-dataset = pd.read_csv("datasets/train.csv")
-target = dataset["label"]
-data = dataset.drop("label", axis=1)
 
-# Normalize input data
-X = np.array(data) / 255.0  # Scale pixel values to [0, 1]
-y = np.eye(10)[np.array(target)]  # One-hot encoding of labels
+
+
+    LOAD_PARAMS = True
+
+    # Load and preprocess the dataset
+    dataset = pd.read_csv("datasets/train.csv")
+    target = dataset["label"]
+    data = dataset.drop("label", axis=1)
+
+    # Normalize input data
+    X = np.array(data) / 255.0  # Scale pixel values to [0, 1]
+    y = np.eye(10)[np.array(target)]  # One-hot encoding of labels
 
 # Activation Functions
 class Activation:
-    def relu(self, x, derivative=False):
-        print(self)
-        print(x)
-        print(derivative)
+    def relu(self, x_relu, derivative=False):
         if derivative:
-            return (x > 0).astype(float)
-        return np.maximum(0, x)
+            return (x_relu > 0).astype(float)
+        return np.maximum(0, x_relu)
     
     def softmax(self, x, derivative=False):
         # nan und inf error catche
@@ -92,7 +91,10 @@ class Layer:
     def forward(self, input_data):
         self.input = input_data 
         self.output_pre_activation = np.dot(input_data, self.weights) + self.bias
-        self.output = self.activation_func(self.output_pre_activation, "yo")
+        if __name__ == "__main__":
+            self.output = self.activation_func(self.output_pre_activation)
+        else:
+            self.output = self.activation_func(self, self.output_pre_activation)
         return self.output
 
 class Network:
@@ -100,15 +102,15 @@ class Network:
         self.layers = []
         self.activation = Activation()
 
-    def guess(self, X, y=None):
-        if X == None:
-            print("No input data provided.")
+    def guess(self, X_guess, y_guess=None):
+        if type(X_guess) == type(None):
+            print("No input data provided.", X_guess)
             return
-        print("Prediction:")
-        print(np.argmax(self.forward(X)))
-        if not y == None:
-            print("Label: ")
-            print(y)
+        prediction = np.argmax(self.forward(X_guess))
+        if not y_guess == None:
+            label = np.argmax(y_guess)
+            return prediction, label
+        return prediction
 
     def save_params(self, file_path):
         fd = os.open(file_path, os.O_CREAT | os.O_WRONLY | os.O_TRUNC)
@@ -131,7 +133,7 @@ class Network:
         serialized_params = os.read(fd, os.path.getsize(file_path))
         params = pickle.loads(serialized_params)
         
-        for i, layer in enumerate(network.layers):
+        for i, layer in enumerate(self.layers):
             layer.weights = params['weights'][i]
             layer.bias = params['biases'][i]
         
@@ -181,8 +183,9 @@ class Network:
                 print(f'Parameters saved at epoch {epoch}')
     def test(self, X, y):
         for i in range(len(X)):
-            #print(f"Predicted: {np.argmax(self.forward(X[i]))}, Actual: {np.argmax(y[i])}")
-            pass
+            if i%500 == 0:
+                print(f"Predicted: {np.argmax(self.forward(X[i]))}, Actual: {np.argmax(y[i])}")
+                pass
         predictions = self.forward(X)
         accuracy = np.mean(np.argmax(predictions, axis=1) == np.argmax(y, axis=1))
         return accuracy
@@ -217,26 +220,28 @@ def backpropagation(network, X, y, learning_rate):
         layer.weights -= tmp_learning_rate * dLoss_dWeights
         layer.bias -= tmp_learning_rate * dLoss_dBias
 
-# Initialize the network and add layers
-activation = Activation()
-network = Network()
 
-network.add(Layer(784, 512, activation.relu))      # Hidden layer 1
-network.add(Layer(512, 256, activation.relu))       # Hidden layer 2
-network.add(Layer(256, 128, activation.relu))       # Hidden layer 3
-network.add(Layer(128, 10, activation.softmax))    # Output layer
+if __name__ == "__main__":
+    # Initialize the network and add layers
+    activation = Activation()
+    network = Network()
 
-if LOAD_PARAMS:
-    try:
-        network.load_params("params/params97_38.bin")
-        print("Parameters loaded")
-    except FileNotFoundError:
-        print("No parameters found. Training network from scratch.")
+    network.add(Layer(784, 512, activation.relu))      # Hidden layer 1
+    network.add(Layer(512, 256, activation.relu))       # Hidden layer 2
+    network.add(Layer(256, 128, activation.relu))       # Hidden layer 3
+    network.add(Layer(128, 10, activation.softmax))    # Output layer
 
-# Train the network
-#network.train(X, y, epochs=5, learning_rate=0.001, batch_size=32)
+    if LOAD_PARAMS:
+        try:
+            network.load_params("params/params97_38.bin")
+            print("Parameters loaded")
+        except FileNotFoundError:
+            print("No parameters found. Training network from scratch.")
+
+    # Train the network
+    #network.train(X, y, epochs=5, learning_rate=0.001, batch_size=32)
 
 
-# Load the test dataset and evaluate the network
-print(network.test(X, y))
-#network.guess(X_guess, y_guess)
+    # Load the test dataset and evaluate the network
+    print(network.test(X_test, y_test))
+    #print(network.guess(X_guess, y_guess))

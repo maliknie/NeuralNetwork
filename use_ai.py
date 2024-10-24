@@ -22,20 +22,26 @@ class DrawingApp:
             self.master = master
             self.master.title("Predict Digit")
             self.returned_image = None
+            self.prediction = None
     
             self.canvas = tk.Canvas(master, width=280, height=280, bg='black')  # Background black for MNIST-style look
             self.canvas.pack()
 
-            self.ok_button = tk.Button(master, text='Ok', command=self.return_image)
-            self.ok_button.pack()
+            #self.ok_button = tk.Button(master, text='Ok', command=self.return_image)
+            #self.ok_button.pack()
             
             self.clear_button = tk.Button(master, text='Clear', command=self.clear_canvas)
             self.clear_button.pack()
 
-            self.predict_button = tk.Button(master, text='Predict', command=self.network.guess(self.returned_image))
-    
+            #self.predict_button.pack()
+            #self.predict_button = tk.Button(master, text='Predict', command=self.predict)
+
+            self.prediction_label = tk.Label(master, text="Prediction: " + str(self.prediction))
+            self.prediction_label.pack()
+
+
             self.canvas.bind("<B1-Motion>", self.paint)
-            self.canvas.bind("<ButtonRelease-1>", self.reset)
+            self.canvas.bind("<ButtonRelease-1>", self.predict)
     
             self.image_data = np.zeros((28, 28), dtype=int)  # Initialize as black
             
@@ -73,27 +79,23 @@ class DrawingApp:
         
         def clear_canvas(self):
             self.canvas.delete("all")
-            self.image_data.fill(0)  # Reset to black
+            self.image_data.fill(0)
+            self.prediction = None
+            self.prediction_label.config(text="Prediction: " + str(self.prediction))
     
         def return_image(self):
             self.returned_image = self.image_data.reshape(1, 784) / 255.0
-            self.master.quit()  # Close the window
+
+        def predict(self, event):
+            self.return_image()
+            self.prediction = self.network.guess(self.returned_image)
+            self.prediction_label.config(text="Prediction: " + str(self.prediction))
     
     # Initialize the Tkinter application and start the main loop
-    root = tk.Tk()
-    app = DrawingApp(root)
-    root.mainloop()
-
-    return app.returned_image  # Return the image after the window is closed
+   
 
 network = initialize_network()
-while True:
-    input_tensor = predict_image()  # input_tensor should now be a valid array, not None
-    if input_tensor is not None:
-        network.guess(input_tensor, "No Label given")
-    else:
-        print("No image drawn.")
 
-    user_input = input("Draw another image? (Y/n): ")
-    if user_input.lower() == 'n':
-        break
+root = tk.Tk()
+app = DrawingApp(root, network)
+root.mainloop()
