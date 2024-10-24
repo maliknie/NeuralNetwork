@@ -24,17 +24,12 @@ class DrawingApp:
             self.returned_image = None
             self.prediction = None
     
-            self.canvas = tk.Canvas(master, width=280, height=280, bg='black')  # Background black for MNIST-style look
+            self.canvas = tk.Canvas(master, width=280, height=280, bg='black')
             self.canvas.pack()
-
-            #self.ok_button = tk.Button(master, text='Ok', command=self.return_image)
-            #self.ok_button.pack()
             
             self.clear_button = tk.Button(master, text='Clear', command=self.clear_canvas)
             self.clear_button.pack()
 
-            #self.predict_button.pack()
-            #self.predict_button = tk.Button(master, text='Predict', command=self.predict)
 
             self.prediction_label = tk.Label(master, text="Prediction: " + str(self.prediction))
             self.prediction_label.pack()
@@ -43,29 +38,25 @@ class DrawingApp:
             self.canvas.bind("<B1-Motion>", self.paint)
             self.canvas.bind("<ButtonRelease-1>", self.predict)
     
-            self.image_data = np.zeros((28, 28), dtype=int)  # Initialize as black
+            self.image_data = np.zeros((28, 28), dtype=int)
             
     
         def paint(self, event):
             x, y = event.x // 10, event.y // 10
             if 0 <= x < 28 and 0 <= y < 28:
-                # Draw the main white line (255)
-                if self.image_data[y, x] < 255:  # Only update if it's not already white
+                if self.image_data[y, x] < 255:
                     self.image_data[y, x] = 255
                     self.update_canvas(x, y, 255)
-    
-                # Draw smooth gray surrounding pixels
+
                 self.draw_surrounding_pixels(x, y)
     
         def draw_surrounding_pixels(self, x, y):
-            for dx in [-2, -1, 0, 1, 2]:  # Include a larger radius for smoother transition
+            for dx in [-2, -1, 0, 1, 2]:
                 for dy in [-2, -1, 0, 1, 2]:
                     if (dx != 0 or dy != 0) and 0 <= x + dx < 28 and 0 <= y + dy < 28:
                         distance = math.sqrt(dx**2 + dy**2)
-                        if distance <= 2:  # Limit the distance
-                            # Gradually fade to gray, with closer pixels being brighter
-                            gray_value = int(255 * (1 - distance / 2))  # Full white to dark gray
-                            # Update only if the new gray value is lighter (higher) than the current value
+                        if distance <= 2:
+                            gray_value = int(255 * (1 - distance / 2))
                             if self.image_data[y + dy, x + dx] < gray_value:
                                 self.image_data[y + dy, x + dx] = gray_value
                                 self.update_canvas(x + dx, y + dy, gray_value)
@@ -89,10 +80,7 @@ class DrawingApp:
         def predict(self, event):
             self.return_image()
             self.prediction = self.network.guess(self.returned_image)
-            self.prediction_label.config(text="Prediction: " + str(self.prediction))
-    
-    # Initialize the Tkinter application and start the main loop
-   
+            self.prediction_label.config(text="Prediction: " + str(self.prediction))   
 
 network = initialize_network()
 
