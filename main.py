@@ -100,11 +100,15 @@ class Network:
         self.layers = []
         self.activation = Activation()
 
-    def guess(self, X, y):
+    def guess(self, X, y=None):
+        if X == None:
+            print("No input data provided.")
+            return
         print("Prediction:")
         print(np.argmax(self.forward(X)))
-        print("Label: ")
-        print(y)
+        if not y == None:
+            print("Label: ")
+            print(y)
 
     def save_params(self, file_path):
         fd = os.open(file_path, os.O_CREAT | os.O_WRONLY | os.O_TRUNC)

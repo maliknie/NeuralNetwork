@@ -16,27 +16,29 @@ def initialize_network(param_filename="params97_38"):
     network.load_params("params/" + param_filename + ".bin") 
     return network
 
-
-def predict_image():
-    class DrawingApp:
-        def __init__(self, master):
+class DrawingApp:
+        def __init__(self, master, network):
+            self.network = network
             self.master = master
-            self.master.title("Draw a Digit with Soft Gray Edges")
+            self.master.title("Predict Digit")
+            self.returned_image = None
     
             self.canvas = tk.Canvas(master, width=280, height=280, bg='black')  # Background black for MNIST-style look
             self.canvas.pack()
 
-            self.save_button = tk.Button(master, text='Save', command=self.return_image)
-            self.save_button.pack()
+            self.ok_button = tk.Button(master, text='Ok', command=self.return_image)
+            self.ok_button.pack()
             
             self.clear_button = tk.Button(master, text='Clear', command=self.clear_canvas)
             self.clear_button.pack()
+
+            self.predict_button = tk.Button(master, text='Predict', command=self.network.guess(self.returned_image))
     
             self.canvas.bind("<B1-Motion>", self.paint)
             self.canvas.bind("<ButtonRelease-1>", self.reset)
     
             self.image_data = np.zeros((28, 28), dtype=int)  # Initialize as black
-            self.returned_image = None
+            
     
         def paint(self, event):
             x, y = event.x // 10, event.y // 10
@@ -76,22 +78,8 @@ def predict_image():
         def return_image(self):
             self.returned_image = self.image_data.reshape(1, 784) / 255.0
             self.master.quit()  # Close the window
-    
-    # Initialize the Tkinter application and start the main loop
-    root = tk.Tk()
-    app = DrawingApp(root)
-    root.mainloop()
-
-    return app.returned_image  # Return the image after the window is closed
 
 network = initialize_network()
-while True:
-    input_tensor = predict_image()  # input_tensor should now be a valid array, not None
-    if input_tensor is not None:
-        network.guess(input_tensor, "No Label given")
-    else:
-        print("No image drawn.")
-
-    user_input = input("Draw another image? (Y/n): ")
-    if user_input.lower() == 'n' or user_input.lower() == 'N':
-        break
+root = tk.Tk()
+app = DrawingApp(root)
+root.mainloop()
