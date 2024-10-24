@@ -57,9 +57,13 @@ class ImageDisplay:
         self.canvas = tk.Canvas(master, width=280, height=280, bg='white')
         self.canvas.pack()
 
-        # Label to show the true label and predicted label
+        # Label to show the true label, predicted label, and confidence
         self.label = tk.Label(master, text="", font=('Arial', 14))
         self.label.pack()
+
+        # Label to show the confidence score
+        self.confidence_label = tk.Label(master, text="", font=('Arial', 12))
+        self.confidence_label.pack()
 
         # Button to skip to the next misclassified image
         self.next_button = tk.Button(master, text="Next", command=self.show_next_image)
@@ -69,7 +73,7 @@ class ImageDisplay:
         self.misclassified_images = []
         self.current_index = 0
 
-    def display_image(self, pixel_values, true_label, predicted_label):
+    def display_image(self, pixel_values, true_label, predicted_label, confidence):
         self.canvas.delete("all")  # Clear previous image
         pixel_values = [float(v) for v in pixel_values]  # Ensure values are floats
 
@@ -94,6 +98,9 @@ class ImageDisplay:
         # Update the label with true and predicted values
         self.label.config(text=f"True Label: {true_label}, Predicted Label: {predicted_label}")
 
+        # Update the confidence label
+        self.confidence_label.config(text=f"Confidence: {confidence:.2f}")
+
     def load_misclassified_images(self, images):
         """Load the list of misclassified images."""
         self.misclassified_images = images
@@ -103,11 +110,13 @@ class ImageDisplay:
     def show_next_image(self):
         """Display the next misclassified image in the list."""
         if self.current_index < len(self.misclassified_images):
-            image_data, true_label, predicted_label = self.misclassified_images[self.current_index]
-            self.display_image(image_data, true_label, predicted_label)
+            image_data, true_label, predicted_label, confidence = self.misclassified_images[self.current_index]
+            self.display_image(image_data, true_label, predicted_label, confidence)
             self.current_index += 1
         else:
             self.label.config(text="No more misclassified images.")
+            self.confidence_label.config(text="")
+
 
 # Activation Functions
 class Activation:
@@ -235,24 +244,28 @@ class Network:
                 print(f'Parameters saved at epoch {epoch}')
 
     def test(self, X, y):
-        # Store misclassified images
+        # Store misclassified images along with confidence scores
         misclassified_images = []
 
         for i in range(len(X)):
-            prediction = np.argmax(self.forward(X[i]))
+            output = self.forward(X[i])
+            prediction = np.argmax(output)
+            confidence = np.max(output)  # Confidence is the highest probability from the softmax output
             actual = np.argmax(y[i])
-            if i % 500 == 0:
-                print(f"Predicted: {prediction}, Actual: {actual}")
             
+            if i % 500 == 0:
+                print(f"Predicted: {prediction}, Actual: {actual}, Confidence: {confidence:.2f}")
+
             # Identify misclassified images
             if prediction != actual:
-                misclassified_images.append((X[i], actual, prediction))
+                misclassified_images.append((X[i], actual, prediction, confidence))
 
         # Calculate accuracy
         predictions = self.forward(X)
         accuracy = np.mean(np.argmax(predictions, axis=1) == np.argmax(y, axis=1))
 
         return accuracy, misclassified_images
+
 
 
 
