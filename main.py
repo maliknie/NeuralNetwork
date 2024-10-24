@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import os
 import pickle
+import tkinter as tk
 
 if __name__ == "__main__":
 
@@ -46,6 +47,67 @@ if __name__ == "__main__":
     # Normalize input data
     X = np.array(data) / 255.0  # Scale pixel values to [0, 1]
     y = np.eye(10)[np.array(target)]  # One-hot encoding of labels
+
+class ImageDisplay:
+    def __init__(self, master):
+        self.master = master
+        self.master.title("Misclassified Image Viewer")
+
+        # Canvas to display the image
+        self.canvas = tk.Canvas(master, width=280, height=280, bg='white')
+        self.canvas.pack()
+
+        # Label to show the true label and predicted label
+        self.label = tk.Label(master, text="", font=('Arial', 14))
+        self.label.pack()
+
+        # Button to skip to the next misclassified image
+        self.next_button = tk.Button(master, text="Next", command=self.show_next_image)
+        self.next_button.pack()
+
+        # To store misclassified images and indices
+        self.misclassified_images = []
+        self.current_index = 0
+
+    def display_image(self, pixel_values, true_label, predicted_label):
+        self.canvas.delete("all")  # Clear previous image
+        pixel_values = [float(v) for v in pixel_values]  # Ensure values are floats
+
+        # Ensure pixel_values has exactly 784 values
+        if len(pixel_values) != 784:
+            raise ValueError("The input must contain exactly 784 values.")
+
+        # Loop over the pixel values to display each one on the canvas
+        for i in range(28):
+            for j in range(28):
+                value = pixel_values[i * 28 + j]  # Access each value
+                # Multiply by 255 to get the grayscale intensity (0-255)
+                grayscale_value = int(value * 255)
+                # Create the hex color for the grayscale (RGB)
+                hex_color = f'#{grayscale_value:02x}{grayscale_value:02x}{grayscale_value:02x}'
+                # Draw a rectangle (10x10 pixels for each "pixel" on the canvas)
+                self.canvas.create_rectangle(
+                    j * 10, i * 10, (j + 1) * 10, (i + 1) * 10,
+                    outline="", fill=hex_color
+                )
+
+        # Update the label with true and predicted values
+        self.label.config(text=f"True Label: {true_label}, Predicted Label: {predicted_label}")
+
+    def load_misclassified_images(self, images):
+        """Load the list of misclassified images."""
+        self.misclassified_images = images
+        self.current_index = 0  # Start from the first misclassified image
+        self.show_next_image()
+
+    def show_next_image(self):
+        """Display the next misclassified image in the list."""
+        if self.current_index < len(self.misclassified_images):
+            image_data, true_label, predicted_label = self.misclassified_images[self.current_index]
+            self.display_image(image_data, true_label, predicted_label)
+            self.current_index += 1
+        else:
+            self.label.config(text="No more misclassified images.")
 
 # Activation Functions
 class Activation:
@@ -130,9 +192,6 @@ class Network:
             layer.weights = params['weights'][i]
             layer.bias = params['biases'][i]
         print(f"Parameters loaded from {file_path}")
-
-
-        print(f"Parameters loaded from {file_path}")
     def add(self, layer):
         self.layers.append(layer)
     
@@ -176,13 +235,25 @@ class Network:
                 print(f'Parameters saved at epoch {epoch}')
 
     def test(self, X, y):
+        # Store misclassified images
+        misclassified_images = []
+
         for i in range(len(X)):
-            if i%500 == 0:
-                print(f"Predicted: {np.argmax(self.forward(X[i]))}, Actual: {np.argmax(y[i])}")
-                pass
+            prediction = np.argmax(self.forward(X[i]))
+            actual = np.argmax(y[i])
+            if i % 500 == 0:
+                print(f"Predicted: {prediction}, Actual: {actual}")
+            
+            # Identify misclassified images
+            if prediction != actual:
+                misclassified_images.append((X[i], actual, prediction))
+
+        # Calculate accuracy
         predictions = self.forward(X)
         accuracy = np.mean(np.argmax(predictions, axis=1) == np.argmax(y, axis=1))
-        return accuracy
+
+        return accuracy, misclassified_images
+
 
 
 
@@ -217,6 +288,7 @@ def backpropagation(network, X, y, learning_rate):
 
 if __name__ == "__main__":
     # Initialize the network and add layers
+
     activation = Activation()
     network = Network()
 
@@ -228,14 +300,24 @@ if __name__ == "__main__":
     if LOAD_PARAMS:
         try:
             network.load_params("params/params97_38.bin")
-            print("Parameters loaded")
         except FileNotFoundError:
             print("No parameters found. Training network from scratch.")
 
     # Train the network
-    network.train(X, y, epochs=5, learning_rate=0.0005, batch_size=32)
+    #network.train(X, y, epochs=5, learning_rate=0.0005, batch_size=32)
 
 
     # Load the test dataset and evaluate the network
-    print(network.test(X_test, y_test))
-    #print(network.guess(X_guess, y_guess))
+    accuracy, misclassified_images = network.test(X_test, y_test)
+    print(accuracy)
+
+    # Ask the user if they want to see the errors
+if input("Do you want to see the errors? (Y/n) ").lower() == "y":
+    # Display misclassified images using the ImageDisplay class
+    root = tk.Tk()
+    app = ImageDisplay(root)  # Pass the display (ImageDisplay class)
+    app.load_misclassified_images(misclassified_images)  # Load the misclassified images
+    root.mainloop()  # Start the Tkinter event loop
+
+
+#print(network.guess(X_guess, y_guess))
