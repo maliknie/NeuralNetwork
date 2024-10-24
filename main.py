@@ -24,6 +24,7 @@ def load_dataset(dataset_type):
     dataset = pd.read_csv(fp)
     target = dataset["label"]
     data = dataset.drop("label", axis=1)
+
     X = np.array(data) / 255.0
     y = np.eye(10)[np.array(target)]
 
