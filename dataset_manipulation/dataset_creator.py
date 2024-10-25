@@ -4,7 +4,7 @@ import pandas as pd
 import os
 import math
 
-FILEPATH = "datasets/new_train_set.csv"
+FILEPATH = "datasets/new_schmiddi_train_set.csv"
 
 class DrawingApp:
     def __init__(self, master):
