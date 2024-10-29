@@ -2,252 +2,261 @@ import numpy as np
 import pandas as pd
 import os
 import pickle
+import tkinter as tk
 
-LOAD_PARAMS = False
 
-# Load and preprocess the dataset
-dataset = pd.read_csv("train.csv")
-target = dataset["label"]
-data = dataset.drop("label", axis=1)
+def show_errors():
+    if input("Do you want to see the errors? (Y/n) ").lower() == "y":
+        root = tk.Tk()
+        app = ImageDisplay(root)
+        app.load_misclassified_images(misclassified_images)
+        root.mainloop()
 
-# Normalize input data
-X = np.array(data) / 255.0  # Scale pixel values to [0, 1]
-y = np.eye(10)[np.array(target)]  # One-hot encoding of labels
+def load_dataset(dataset_type):
+    match dataset_type:
+        case "test":
+            fp = FILEPATH_TEST
+        case "train":
+            fp = FILEPATH_TRAIN
+        case _:
+            raise Exception("Enter either 'train' or 'test'.")
+        
+    dataset = pd.read_csv(fp)
+    target = dataset["label"]
+    data = dataset.drop("label", axis=1)
 
-# Activation Functions
-class ReLU:
-    def value(self, x):
-        return np.maximum(0, x)
+    X = np.array(data) / 255.0
+    y = np.eye(10)[np.array(target)]
+
+    return X, y
+
+def go(network, mode, epochs, learning_rate, batch_size):
+    match mode:
+        case "train":
+            X, y = load_dataset("train")
+            network.train(X, y, epochs, learning_rate, batch_size)
+        case "test":
+            X, y = load_dataset("test")
+            accuracy = network.test(X, y)
+            print("Accuracy: ", accuracy)
+            show_errors()
+
+class ImageDisplay:
+    def __init__(self, master):
+        self.master = master
+        self.master.title("Misclassified Image Viewer")
+
+        self.canvas = tk.Canvas(master, width=280, height=280, bg='white')
+        self.canvas.pack()
+
+        self.label = tk.Label(master, text="", font=('Arial', 14))
+        self.label.pack()
+
+        self.confidence_label = tk.Label(master, text="", font=('Arial', 12))
+        self.confidence_label.pack()
+
+        self.next_button = tk.Button(master, text="Next", command=self.show_next_image)
+        self.next_button.pack()
+
+        self.misclassified_images = []
+        self.current_index = 0
+
+    def display_image(self, pixel_values, true_label, predicted_label, confidence):
+        self.canvas.delete("all")
+        pixel_values = [float(v) for v in pixel_values]
+
+        if len(pixel_values) != 784:
+            raise ValueError("The input must contain exactly 784 values.")
+
+        for i in range(28):
+            for j in range(28):
+                value = pixel_values[i * 28 + j]
+                grayscale_value = int(value * 255)
+                hex_color = f'#{grayscale_value:02x}{grayscale_value:02x}{grayscale_value:02x}'
+                self.canvas.create_rectangle(
+                    j * 10, i * 10, (j + 1) * 10, (i + 1) * 10,
+                    outline="", fill=hex_color
+                )
+
+        self.label.config(text=f"True Label: {true_label}, Predicted Label: {predicted_label}")
+        self.confidence_label.config(text=f"Confidence: {confidence:.2f}")
+
+    def load_misclassified_images(self, images):
+        """Load the list of misclassified images."""
+        self.misclassified_images = images
+        self.current_index = 0 
+        self.show_next_image()
+
+    def show_next_image(self):
+        """Display the next misclassified image in the list."""
+        if self.current_index < len(self.misclassified_images):
+            image_data, true_label, predicted_label, confidence = self.misclassified_images[self.current_index]
+            self.display_image(image_data, true_label, predicted_label, confidence)
+            self.current_index += 1
+        else:
+            self.label.config(text="No more misclassified images.")
+            self.confidence_label.config(text="")
+
+class Activation:
+    def relu(self, x_relu, derivative=False):
+        if derivative:
+            return (x_relu > 0).astype(float)
+        return np.maximum(0, x_relu)
     
-    def derivative(self, x):
-        return (x > 0).astype(float)
-
-class Softmax:
-    def value(self, x):
+    def softmax(self, x, derivative=False):
+        # NaN and Inf error catch
         if np.isnan(x).any() or np.isinf(x).any():
             print("NaN or Inf detected in input to softmax.")
             print(x)
             raise ValueError("Invalid values in softmax input.")
         
-        x = x - np.max(x, axis=1, keepdims=True)
-        exp_values = np.exp(x)
+        # Softmax calculation
+        exp_values = np.exp(x - np.max(x, axis=1, keepdims=True))  # Subtract max to prevent overflow
         probabilities = exp_values / np.sum(exp_values, axis=1, keepdims=True)
-        return probabilities
-    def derivative(self, x):
-        return x * (1 - x)
-
-
-class Sigmoid:
-    def value(self, x):
-        return 1 / (1 + np.exp(-x))
-    
-    def derivative(self, x):
-        return x * (1 - x)
-
-# Layer Class
-class Layer:
-    def __init__(self, input_dim, output_dim, activation_func):
-        self.weights = np.random.randn(input_dim, output_dim) * 0.01  # Use smaller scale
-        self.bias = np.zeros((1, output_dim))
-        self.activation_func = activation_func  # Activation function instance
-    
-    def forward(self, input_data):
-        self.input = input_data
-        self.output_pre_activation = np.dot(input_data, self.weights) + self.bias
-        self.output = self.activation_func.value(self.output_pre_activation)
-
-        # Check for NaN or Inf in output
-        if np.isnan(self.output).any() or np.isinf(self.output).any():
-            print("NaN or Inf detected in layer output.")
-            print(self.output)
-            raise ValueError("Invalid values in layer output.")
-
-        return self.output
-
-# Network Class
-class Network:
-    def __init__(self, kernel_size=[3], pooling_layers=[2]):
-        self.kernel_size = kernel_size
-        self.pooling_layers = pooling_layers
-        self.layers = []
-
-    def save_params(self, file_path):
-        with open(file_path, 'wb') as f:
-            # Create a dictionary to store weights and biases
-            params = {
-                'weights': [layer.weights for layer in self.layers],
-                'biases': [layer.bias for layer in self.layers]
-            }
-            # Serialize the parameters using pickle
-            pickle.dump(params, f)
-            print(f"Parameters saved to {file_path}")
-
-    def load_params(self, file_path):
-        try:
-            with open(file_path, 'rb') as f:
-                # Deserialize the parameters using pickle
-                params = pickle.load(f)
-                # Assign the loaded weights and biases back to the network layers
-                for i, layer in enumerate(self.layers):
-                    layer.weights = params['weights'][i]
-                    layer.bias = params['biases'][i]
-            print(f"Parameters loaded from {file_path}")
-        except Exception as e:
-            print(f"Error loading parameters: {e}")
-
-    def add(self, layer):
-        self.layers.append(layer)
-
-    def forward(self, X):
-        for layer in self.layers:
-            X = layer.forward(X)
-        self.output = X  # Final output of the network
-        return self.output
-
-    def calculate_loss(self, X, y):
-        predictions = self.forward(X)
-        # Cross-entropy loss
-        epsilon = 1e-8  # Small constant to prevent log(0)
-        log_preds = np.log(predictions + epsilon)
-        loss = -np.mean(np.sum(y * log_preds, axis=1))
-
-        # Check for NaN or Inf in loss
-        if np.isnan(loss) or np.isinf(loss):
-            print("NaN or Inf detected in loss calculation.")
-            raise ValueError("Invalid values in loss calculation.")
-
-        return loss
-    
-    def backward(self, X, y, learning_rate):
-        backpropagation(self, X, y, learning_rate)
-    
-    def train(self, X, y, epochs, learning_rate, batch_size):
-        if LOAD_PARAMS:
-            try:
-                self.load_params('params.bin')
-                loss = self.calculate_loss(X, y)
-                print(f'Initial Loss: {loss:.4f}')
-            except Exception as e:
-                print('Error loading parameters. Training from scratch.')
-
-        num_samples = X.shape[0]
-        for epoch in range(epochs):
-            # Shuffle data at the beginning of each epoch
-            permutation = np.random.permutation(num_samples)
-            X_shuffled = X[permutation]
-            y_shuffled = y[permutation]
-
-            for i in range(0, num_samples, batch_size):
-                X_batch = X_shuffled[i:i + batch_size]
-                y_batch = y_shuffled[i:i + batch_size]
-                X_processed = np.zeros((X_batch.shape[0], 169))  # Initialize processed output
-
-                for j in range(len(X_batch)):
-                    X_processed[j] = self.CNN_preprocessing(X_batch[j])
-
-                self.backward(X_processed, y_batch, learning_rate)
-                
-                # Optionally calculate loss after each batch
-                loss = self.calculate_loss(X_processed, y_batch)
-
-            # Optional to save parameters after each epoch
-            loss = self.calculate_loss(X_processed, y_batch)  # Calculate loss on processed batch
-            print(f'Epoch {epoch + 1}/{epochs}, Loss: {loss:.4f}')
-            if epoch == epochs - 1:
-                self.save_params('params.bin')
-                print('Parameters saved')
-
-    def convolution2d(self, X, kernel):
-        kernel_size = kernel.shape[0]
-        height, width = X.shape
-        output_height = height - kernel_size + 1
-        output_width = width - kernel_size + 1
-        output = np.zeros((output_height, output_width))
-
-        for i in range(output_height):
-            for j in range(output_width):
-                output[i, j] = np.sum(X[i:i + kernel_size, j:j + kernel_size] * kernel)
-
-        return output
-
-    def max_pooling2d(self, X, pool_size):
-        height, width = X.shape
-        output_height = height // pool_size
-        output_width = width // pool_size
-        output = np.zeros((output_height, output_width))
-
-        for i in range(output_height):
-            for j in range(output_width):
-                output[i, j] = np.max(X[i * pool_size:(i + 1) * pool_size, j * pool_size:(j + 1) * pool_size])
-
-        return output
-
-    def CNN_preprocessing(self, X):
-        kernel_size = self.kernel_size[0]
-        pooling_size = self.pooling_layers[0]
-
-        X = X.reshape(28, 28)  # Assuming input is a flattened 28x28 image
-
-        # Apply convolution
-        X = self.convolution2d(X, np.ones((kernel_size, kernel_size)) / (kernel_size ** 2))
-
-        # Apply max pooling
-        X = self.max_pooling2d(X, pooling_size)
-
-        # Flatten to a vector
-        X = X.flatten()
-
-        # Check output shape
-        expected_shape = 169  # Change as needed
-        if X.shape[0] != expected_shape:
-            raise ValueError(f"Unexpected output shape from CNN preprocessing: {X.shape}. Expected shape: ({expected_shape},)")
-
-        return X
-
-
-# Backpropagation function with gradient clipping
-def backpropagation(network, X, y, learning_rate):
-    predictions = network.forward(X)
-    num_layers = len(network.layers)
-    layer_deltas = [None] * num_layers
-    loss = network.calculate_loss(X, y)
-    tmp_learning_rate = min(learning_rate, loss * 0.1)
-
-    # Calculate delta for the output layer
-    delta = predictions - y  # Derivative of cross-entropy loss with softmax
-    
-    for i in reversed(range(num_layers)):
-        layer = network.layers[i]
         
-        if i == num_layers - 1:
-            # Backprop through output layer
-            layer_deltas[i] = delta * layer.activation_func.derivative(layer.output_pre_activation)
-        else:
-            # Backprop through hidden layers
-            next_layer = network.layers[i + 1]
-            layer_deltas[i] = np.dot(layer_deltas[i + 1], next_layer.weights.T) * layer.activation_func.derivative(layer.output_pre_activation)
+        # Derivative = Jacobian matrix
+        if derivative:
+            jacobian_matrices = []
+            for prob in probabilities:
+                jacobian_matrix = np.diag(prob)
+                for i in range(len(prob)):
+                    for j in range(len(prob)):
+                        if i == j:
+                            jacobian_matrix[i][j] = prob[i] * (1 - prob[i])
+                        else:
+                            jacobian_matrix[i][j] = -prob[i] * prob[j]
+                jacobian_matrices.append(jacobian_matrix)
+            return np.array(jacobian_matrices)
+        
+        return probabilities
 
-        # Update weights and biases
-        layer.weights -= tmp_learning_rate * np.dot(layer.input.T, layer_deltas[i])
-        layer.bias -= tmp_learning_rate * np.sum(layer_deltas[i], axis=0, keepdims=True)
+class ConvLayer:
+    def __init__(self, num_filters, filter_size, padding=0, stride=1):
+        self.num_filters = num_filters
+        self.filter_size = filter_size
+        self.padding = padding
+        self.stride = stride
+        self.filters = np.random.randn(num_filters, filter_size, filter_size) / (filter_size * filter_size)
 
-# Instantiate and add layers to the network
-network = Network(kernel_size=[3], pooling_layers=[2])
-network.add(Layer(169, 64, ReLU()))      # Hidden layer 1
-network.add(Layer(64, 64, ReLU()))       # Hidden layer 2
-network.add(Layer(64, 10, Softmax()))    # Output layer
+    def conv2d(self, x):
+        if x.ndim == 3:  # Add batch dimension if missing
+            x = x[np.newaxis, :, :, :]
+        elif x.ndim == 2:  # Add both batch and channel dimensions
+            x = x[np.newaxis, np.newaxis, :, :]
+        
+        batch_size, channels, height, width = x.shape
+        padded_input = np.pad(x, ((0, 0), (0, 0), (self.padding, self.padding), (self.padding, self.padding)), mode='constant')
+        out_height = (height - self.filter_size + 2 * self.padding) // self.stride + 1
+        out_width = (width - self.filter_size + 2 * self.padding) // self.stride + 1
+        output = np.zeros((batch_size, self.num_filters, out_height, out_width))
 
-# Train the network
-network.train(X, y, epochs=10, learning_rate=0.001, batch_size=32)
+        for i in range(out_height):
+            for j in range(out_width):
+                region = padded_input[:, :, i*self.stride:i*self.stride+self.filter_size, j*self.stride:j*self.stride+self.filter_size]
+                output[:, :, i, j] = np.tensordot(region, self.filters, axes=((1, 2, 3), (1, 2, 3)))
+        
+        return output
+    
+    def forward(self, input):
+        self.input = input
+        self.output = self.conv2d(input)
+        return self.output
 
-# Load the test dataset
-test_dataset = pd.read_csv("test.csv")
-test_data = np.array(test_dataset) / 255.0  # Normalize test data
+    def backward(self, d_out, learning_rate):
+        d_filters = np.zeros_like(self.filters)
+        batch_size, channels, height, width = self.input.shape
+        padded_input = np.pad(self.input, ((0, 0), (0, 0), (self.padding, self.padding), (self.padding, self.padding)), mode='constant')
+        padded_d_input = np.pad(np.zeros_like(self.input), ((0, 0), (0, 0), (self.padding, self.padding), (self.padding, self.padding)), mode='constant')
 
-# Assuming test data needs the same preprocessing
-X_test_processed = np.zeros((test_data.shape[0], 784))
-for j in range(len(test_data)):
-    X_test_processed[j] = network.CNN_preprocessing(test_data[j])
+        for i in range(d_out.shape[2]):
+            for j in range(d_out.shape[3]):
+                region = padded_input[:, :, i*self.stride:i*self.stride+self.filter_size, j*self.stride:j*self.stride+self.filter_size]
+                for f in range(self.num_filters):
+                    d_filters[f] += np.sum(region * d_out[:, f, i, j][:, np.newaxis, np.newaxis, np.newaxis], axis=0)
+                
+                for n in range(batch_size):
+                    padded_d_input[n, :, i*self.stride:i*self.stride+self.filter_size, j*self.stride:j*self.stride+self.filter_size] += \
+                        np.sum(self.filters[:, np.newaxis, :, :] * d_out[n, :, i, j][:, np.newaxis, np.newaxis, np.newaxis], axis=0)
 
-# Predictions
-predictions = network.forward(X_test_processed)
+        d_input = padded_d_input[:, :, self.padding:height+self.padding, self.padding:width+self.padding]
+        self.filters -= learning_rate * d_filters
+        return d_input
+
+
+class PoolingLayer:
+    def __init__(self, pool_size=2, stride=2):
+        self.pool_size = pool_size
+        self.stride = stride
+
+    def forward(self, x):
+        batch_size, num_channels, height, width = x.shape
+        out_height = height // self.pool_size
+        out_width = width // self.pool_size
+        output = np.zeros((batch_size, num_channels, out_height, out_width))
+
+        for i in range(out_height):
+            for j in range(out_width):
+                region = x[:, :, i*self.stride:i*self.stride+self.pool_size, j*self.stride:j*self.stride+self.pool_size]
+                output[:, :, i, j] = np.max(region, axis=(2, 3))
+
+        return output
+
+    def backward(self, d_out):
+        batch_size, num_channels, height, width = d_out.shape
+        d_input = np.zeros((batch_size, num_channels, height * self.pool_size, width * self.pool_size))
+
+        for i in range(height):
+            for j in range(width):
+                region = d_input[:, :, i*self.pool_size:(i+1)*self.pool_size, j*self.pool_size:(j+1)*self.pool_size]
+                region[np.arange(batch_size)[:, None, None], np.arange(num_channels)[:, None], np.unravel_index(np.argmax(region, axis=(2, 3)), (self.pool_size, self.pool_size))] = d_out[:, :, i, j]
+
+        return d_input
+
+class Network:
+    def __init__(self):
+        self.layers = [
+            ConvLayer(num_filters=8, filter_size=3, padding=1),  # Convolutional layer
+            PoolingLayer(pool_size=2, stride=2),  # Pooling layer
+            ConvLayer(num_filters=16, filter_size=3, padding=1),  # Second convolutional layer
+            PoolingLayer(pool_size=2, stride=2),  # Second pooling layer
+            ConvLayer(num_filters=32, filter_size=3, padding=1),  # Third convolutional layer
+            PoolingLayer(pool_size=2, stride=2),  # Third pooling layer
+            # Fully connected layers can be added here as before...
+        ]
+        self.activation = Activation()
+        self.misclassified_images = []
+
+    def forward(self, x):
+        for layer in self.layers:
+            x = layer.forward(x)
+        return x
+
+    def backward(self, d_out, learning_rate):
+        for layer in reversed(self.layers):
+            d_out = layer.backward(d_out, learning_rate)
+
+    def train(self, X, y, epochs, learning_rate, batch_size):
+        num_batches = X.shape[0] // batch_size
+        for epoch in range(epochs):
+            for i in range(num_batches):
+                x_batch = X[i * batch_size: (i + 1) * batch_size]
+                y_batch = y[i * batch_size: (i + 1) * batch_size]
+                predictions = self.forward(x_batch)
+                loss = predictions - y_batch
+                d_out = self.activation.softmax(predictions, derivative=True)  # Use softmax derivative
+                self.backward(d_out, learning_rate)
+
+    def test(self, X, y):
+        correct_predictions = 0
+        for i in range(X.shape[0]):
+            prediction = self.forward(X[i:i+1])
+            if np.argmax(prediction) == np.argmax(y[i]):
+                correct_predictions += 1
+            else:
+                self.misclassified_images.append((X[i], np.argmax(y[i]), np.argmax(prediction), np.max(prediction)))
+        return correct_predictions / X.shape[0]
+
+# Initialize and run the network
+network = Network()
+FILEPATH_TRAIN = "datasets/train.csv"
+go(network, "train", epochs=10, learning_rate=0.01, batch_size=64)  # Adjust epochs and learning rate as needed
