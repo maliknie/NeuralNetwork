@@ -31,8 +31,8 @@ def train_model(model, x_train, y_train, epochs, learning_rate):
     for epoch in range(epochs):
         epoch_loss = 0
         for i in range(len(x_train)):
-            x = x_train[i].reshape(1, 1, 28, 28)  # Reshape input for CNN
-            y = y_train[i].reshape(1, -1)  # Reshape label for output layer
+            x = x_train[i].reshape(1, 1, 28, 28)
+            y = y_train[i].reshape(1, -1) 
             
             # Forward pass
             output = model.forward(x)
@@ -51,18 +51,16 @@ def train_model(model, x_train, y_train, epochs, learning_rate):
         print(f"Epoch {epoch + 1}/{epochs}, Loss: {epoch_loss / len(x_train)}")
 
 
-# Save model parameters to a binary file
 def save_model(model, filename="cnn_model.pkl"):
     with open(filename, 'wb') as file:
         pickle.dump(model, file)
     print(f"Model saved to {filename}")
 
-# Load and preprocess data
-filename = "datasets/train.csv"  # Path to your MNIST CSV file
+filename = "datasets/train.csv"
 data, labels = load_data(filename)
 labels = one_hot_encode(labels)
 
-# Split data into training and validation sets without sklearn
+# Split data into training and validation sets
 x_train, y_train, x_val, y_val = train_val_split(data, labels, val_ratio=0.2)
 
 # Define CNN model architecture
