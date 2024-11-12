@@ -65,7 +65,7 @@ x_train, y_train, x_val, y_val = train_val_split(data, labels, val_ratio=0.2)
 
 # Define CNN model architecture
 model = Model([
-    ConvLayer(filter_size=3, num_filters = 8, padding=1, stride=1),
+    ConvLayer(filter_size=3, num_filters=8, padding=1, stride=1),
     ActivationLayer(Activation.relu, Activation.relu_derivative),
     PoolingLayer(pool_size=2, stride=2),
     Flatten(),
