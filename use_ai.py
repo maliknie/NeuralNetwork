@@ -7,13 +7,15 @@ import tkinter as tk
 
 from main import Network, Layer, Activation
 
+LOAD_PARAMS = True
+
 def initialize_network(param_filename="params97_38"):
     network = Network()
     network.add(Layer(784, 512, Activation.relu))
     network.add(Layer(512, 256, Activation.relu))
     network.add(Layer(256, 128, Activation.relu))
     network.add(Layer(128, 10, Activation.softmax))
-    network.load_params("params/" + param_filename + ".bin") 
+    network.load_params("params/" + param_filename + ".bin", LOAD_PARAMS) 
     return network
 
 class DrawingApp:
@@ -79,7 +81,7 @@ class DrawingApp:
 
         def predict(self, event):
             self.return_image()
-            self.prediction = self.network.guess(self.returned_image)
+            self.prediction = self.network.predict(self.returned_image)
             self.prediction_label.config(text="Prediction: " + str(self.prediction))   
 
 network = initialize_network()

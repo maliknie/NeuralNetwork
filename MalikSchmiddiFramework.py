@@ -119,7 +119,7 @@ class ActivationLayer:
             return d_out * self.derivative_func(self.input)
         return d_out
 
-# Pooling Layer with Backpropagation
+# Pooling Layer
 class PoolingLayer:
     def __init__(self, pool_size=2, stride=2):
         self.pool_size = pool_size
