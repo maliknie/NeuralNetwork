@@ -3,7 +3,7 @@ import numpy as np
 import pickle
 import pandas as pd
 
-# Load MNIST data from CSV file
+# Load MNIST data from CSV file 
 def load_data(filename):
     data = pd.read_csv(filename)
     labels = data['label'].values

@@ -8,7 +8,7 @@ class ConvLayer:
         self.filters = np.random.randn(num_filters, 1, filter_size, filter_size) / (filter_size * filter_size)
         self.input = None
         self.d_input = None
-
+ 
     def conv2d(self, x):
         # Adjust input dimensions
         if x.ndim == 3:

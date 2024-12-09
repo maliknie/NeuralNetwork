@@ -3,7 +3,7 @@ import pandas as pd
 import os
 import pickle
 import tkinter as tk
-
+ 
 
 def show_errors():
     if input("Do you want to see the errors? (Y/n) ").lower() == "y":

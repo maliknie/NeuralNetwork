@@ -17,7 +17,7 @@ def initialize_network(param_filename="params97_38"):
     network.add(Layer(128, 10, Activation.softmax))
     network.load_params("params/" + param_filename + ".bin", LOAD_PARAMS) 
     return network
-
+ 
 class DrawingApp:
         def __init__(self, master, network):
             self.network = network

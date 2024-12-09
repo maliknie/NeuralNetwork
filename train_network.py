@@ -10,7 +10,7 @@ def load_dataset(dataset_type):
         case "test":
             fp = FILEPATH_TEST
         case "train":
-            fp = FILEPATH_TRAIN
+            fp = FILEPATH_TRAIN 
         case _:
             raise Exception("Enter either 'train' or 'test'.")
         
