@@ -229,7 +229,7 @@ class Network:
     def forward(self, x):
         for layer in self.layers:
             x = layer.forward(x)
-        return x
+        return x 
 
     def backward(self, d_out, learning_rate):
         for layer in reversed(self.layers):
